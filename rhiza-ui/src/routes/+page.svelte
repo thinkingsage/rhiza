@@ -33,8 +33,8 @@
 
 <main>
   <div class="card">
-    <h1>Rhiza ῥίζα</h1>
-    <p>Explore the Greek roots of the English language.</p>
+    <h1>ῥίζα</h1>
+    <p class="subtitle">Explore the Greek roots of the English language.</p>
 
     <div class="search-container">
       <input
@@ -43,7 +43,7 @@
         placeholder="Enter a word (e.g., philosophy)"
         on:keydown={(e) => e.key === 'Enter' && searchForRoot()}
       />
-      <button on:click={searchForRoot} disabled={isLoading}>
+      <button class="search-btn" on:click={searchForRoot} disabled={isLoading}>
         {isLoading ? 'Searching...' : 'Search'}
       </button>
     </div>
@@ -73,9 +73,8 @@
 </main>
 
 <style>
-  /* This block contains our CSS styling */
   main {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: var(--font-sans);
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -95,8 +94,10 @@
   }
 
   h1 {
+    font-family: var(--font-serif);
     color: #333;
     font-weight: 600;
+    font-size: 2.5rem;
   }
 
   p {
@@ -116,21 +117,7 @@
     border: 1px solid #ccc;
     border-radius: 5px;
     font-size: 1rem;
-  }
-
-  button {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 5px;
-    background-color: #007bff;
-    color: white;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-
-  button:hover {
-    background-color: #0056b3;
+    font-family: var(--font-sans);
   }
 
   button:disabled {
@@ -144,6 +131,7 @@
   }
 
   .result h2 {
+    font-family: var(--font-serif);
     text-transform: capitalize;
   }
 
@@ -158,6 +146,12 @@
     border: 1px solid #eee;
     border-radius: 5px;
     margin-bottom: 0.5rem;
+  }
+
+  .result li strong {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.1em;
   }
   
   .error {
