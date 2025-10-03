@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  rhiza-api:
+    build: ./rhiza-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./rhiza-api:/app
+
+  rhiza-ui:
+    build: ./rhiza-ui
+    ports:
+      - "5173:5173" # Default SvelteKit port
+    volumes:
+      - ./rhiza-ui:/app
+      - /app/node_modules # Exclude node_modules from volume mount
+    depends_on:
+      - rhiza-api
