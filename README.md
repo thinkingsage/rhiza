@@ -40,6 +40,39 @@ Rhiza (ῥίζα, meaning "root" in Ancient Greek) is a modern web application t
 
 ## 🚀 Quick Start
 
+### Prerequisites
+
+Before running Rhiza, you need to obtain API keys for the AI services:
+
+1. **AWS Bedrock Access** (Primary AI provider)
+   - Set up AWS account with Bedrock access
+   - Enable Claude Sonnet 4 model in your region
+   - Generate AWS access credentials
+
+2. **Google Gemini API Key** (Fallback AI provider)
+   - Visit [Google AI Studio](https://aistudio.google.com/)
+   - Create a new API key for Gemini
+
+### Environment Setup
+
+Create a `.env` file in the project root with your API keys:
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit with your API keys
+AWS_BEARER_TOKEN_BEDROCK=your_aws_bedrock_token_here
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Optional: Configure other settings
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=password
+```
+
+**⚠️ Important:** The application requires at least one AI provider to function. Without valid API keys, etymology analysis will fail.
+
 ### Using Docker Compose (Recommended)
 
 ```bash
@@ -47,7 +80,7 @@ Rhiza (ῥίζα, meaning "root" in Ancient Greek) is a modern web application t
 git clone https://github.com/your-username/rhiza.git
 cd rhiza
 
-# Set up environment variables
+# Set up environment variables (see above)
 cp .env.example .env
 # Edit .env with your API keys
 
