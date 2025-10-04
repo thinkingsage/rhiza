@@ -1,8 +1,10 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List
 import google.generativeai as genai
+from services.neo4j_service import EtymologyGraphService
 
 # --- Configuration ---
 # It's best practice to load your API key from an environment variable
@@ -14,6 +16,22 @@ app = FastAPI(
     description="API for exploring the Greek roots of English words.",
     version="1.0.0",
 )
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify exact origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize Neo4j service
+graph_service = EtymologyGraphService()
+
+@app.on_event("shutdown")
+def shutdown_event():
+    graph_service.close()
 
 # --- Pydantic Models for Data Validation ---
 
@@ -55,23 +73,22 @@ Now, analyze the following word:
 # --- API Endpoint ---
 
 @app.get("/word/{english_word}", response_model=WordResponse)
-async def get_word_roots(english_word: str):
+async def get_word_roots(english_word: str, response: Response):
     """
     Analyzes an English word to find its Ancient Greek roots.
+    Checks graph database first, falls back to AI if not found.
     """
+    response.headers["Content-Type"] = "application/json; charset=utf-8"
     try:
-        # --- Placeholder for Gemini API Call ---
-        # In a real implementation, you would make the API call here.
-        # For example:
-        # model = genai.GenerativeModel('gemini-pro')
-        # full_prompt = f"{SYSTEM_PROMPT}\n{english_word}"
-        # response = await model.generate_content_async(full_prompt)
-        # response_json = json.loads(response.text)
-        # return response_json
-
-        # For now, we'll return a hardcoded example for testing.
+        # First, check if we have this word in our graph
+        cached_result = graph_service.find_word_roots(english_word)
+        if cached_result:
+            return cached_result
+        
+        # If not in graph, use hardcoded response for now
+        # TODO: Replace with actual AI call
         if english_word.lower() == "philosophy":
-            return {
+            result = {
               "name": "philosophy",
               "roots": [
                 {
@@ -86,9 +103,48 @@ async def get_word_roots(english_word: str):
                 }
               ]
             }
+            
+            # Store the result in graph for future queries
+            graph_service.store_etymology(english_word, result["roots"])
+            return result
         else:
             return {"name": english_word, "roots": []}
 
     except Exception as e:
         # Handle potential errors, like the LLM not returning valid JSON
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/root/{root_name}/words")
+async def get_words_from_root(root_name: str):
+    """
+    Find all words that derive from a specific Greek root.
+    """
+    try:
+        words = graph_service.get_related_words(root_name)
+        return {"root": root_name, "words": words}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/word/{english_word}/graph")
+async def get_word_graph(english_word: str):
+    """
+    Get graph visualization data for a word and its roots.
+    """
+    try:
+        with graph_service.driver.session() as session:
+            result = session.run("""
+                MATCH (w:EnglishWord {name: $word})-[:DERIVES_FROM]->(r:GreekRoot)
+                RETURN {
+                    nodes: collect(DISTINCT {id: w.name, label: w.name, type: 'word'}) + 
+                           collect(DISTINCT {id: r.transliteration, label: r.name + ' (' + r.meaning + ')', type: 'root'}),
+                    links: collect({source: w.name, target: r.transliteration, type: 'derives_from'})
+                } as graph
+            """, word=english_word.lower())
+            
+            record = result.single()
+            if record and record["graph"]["nodes"]:
+                return record["graph"]
+            else:
+                return {"nodes": [], "links": []}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
