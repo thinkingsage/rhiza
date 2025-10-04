@@ -26,16 +26,27 @@ class EtymologyGraphService:
     async def create_indexes(self):
         """Create database indexes for optimal query performance"""
         async with self.driver.session() as session:
-            # Index on EnglishWord.name for fast word lookups
-            await session.run("CREATE INDEX english_word_name IF NOT EXISTS FOR (w:EnglishWord) ON (w.name)")
-            
-            # Index on GreekRoot.name for fast root lookups
-            await session.run("CREATE INDEX greek_root_name IF NOT EXISTS FOR (r:GreekRoot) ON (r.name)")
-            
-            # Index on GreekRoot.transliteration for fast transliteration lookups
-            await session.run("CREATE INDEX greek_root_transliteration IF NOT EXISTS FOR (r:GreekRoot) ON (r.transliteration)")
-            
-        logger.info("Database indexes created successfully")
+            try:
+                # Index on EnglishWord.name for fast word lookups
+                await session.run("CREATE INDEX english_word_name_idx IF NOT EXISTS FOR (w:EnglishWord) ON (w.name)")
+                
+                # Index on GreekRoot.name for fast root lookups  
+                await session.run("CREATE INDEX greek_root_name_idx IF NOT EXISTS FOR (r:GreekRoot) ON (r.name)")
+                
+                # Index on GreekRoot.transliteration for fast transliteration lookups
+                await session.run("CREATE INDEX greek_root_transliteration_idx IF NOT EXISTS FOR (r:GreekRoot) ON (r.transliteration)")
+                
+                logger.info("Database indexes created successfully")
+            except Exception as e:
+                # Try legacy syntax for older Neo4j versions
+                try:
+                    await session.run("CREATE INDEX ON :EnglishWord(name)")
+                    await session.run("CREATE INDEX ON :GreekRoot(name)")  
+                    await session.run("CREATE INDEX ON :GreekRoot(transliteration)")
+                    logger.info("Database indexes created using legacy syntax")
+                except Exception as legacy_error:
+                    logger.warning(f"Failed to create indexes: {e}, legacy attempt: {legacy_error}")
+                    # Continue without indexes - not critical for functionality
     
     async def close(self):
         await self.driver.close()
@@ -82,10 +93,16 @@ class EtymologyGraphService:
                 MERGE (r:GreekRoot {name: root.name})
                 ON CREATE SET 
                     r.transliteration = root.transliteration,
-                    r.meaning = root.meaning
+                    r.meaning = root.meaning,
+                    r.category = root.category,
+                    r.frequency = root.frequency,
+                    r.part_of_speech = root.part_of_speech
                 ON MATCH SET 
                     r.transliteration = COALESCE(r.transliteration, root.transliteration),
-                    r.meaning = COALESCE(r.meaning, root.meaning)
+                    r.meaning = COALESCE(r.meaning, root.meaning),
+                    r.category = COALESCE(r.category, root.category),
+                    r.frequency = COALESCE(r.frequency, root.frequency),
+                    r.part_of_speech = COALESCE(r.part_of_speech, root.part_of_speech)
                 MERGE (w)-[:DERIVES_FROM]->(r)
             """, word=word.lower(), roots=roots)
     
