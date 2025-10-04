@@ -6,13 +6,33 @@ services:
       - "8000:8000"
     volumes:
       - ./rhiza-api:/app
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+    depends_on:
+      - neo4j
 
   rhiza-ui:
     build: ./rhiza-ui
     ports:
-      - "5173:5173" # Default SvelteKit port
+      - "5173:80" # Map host 5173 to container 80 (nginx)
     volumes:
       - ./rhiza-ui:/app
       - /app/node_modules # Exclude node_modules from volume mount
     depends_on:
       - rhiza-api
+
+  neo4j:
+    image: neo4j:5.15-community
+    ports:
+      - "7474:7474"  # Web interface
+      - "7687:7687"  # Bolt protocol
+    environment:
+      NEO4J_AUTH: neo4j/password
+      NEO4J_PLUGINS: '["apoc"]'
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    volumes:
+      - neo4j_data:/data
+
+volumes:
+  neo4j_data:
