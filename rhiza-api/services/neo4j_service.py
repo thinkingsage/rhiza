@@ -41,7 +41,7 @@ class EtymologyGraphService:
         await self.driver.close()
     
     async def find_word_roots(self, word: str) -> Optional[Dict]:
-        """Query graph for existing word etymology"""
+        """Query graph for existing word etymology with enriched properties"""
         async with self.driver.session() as session:
             result = await session.run("""
                 MATCH (w:EnglishWord {name: $word})-[:DERIVES_FROM]->(r:GreekRoot)
@@ -49,7 +49,10 @@ class EtymologyGraphService:
                        collect({
                            name: r.name,
                            transliteration: r.transliteration,
-                           meaning: r.meaning
+                           meaning: r.meaning,
+                           category: r.category,
+                           frequency: r.frequency,
+                           part_of_speech: r.part_of_speech
                        }) as roots
             """, word=word.lower())
             
@@ -62,9 +65,9 @@ class EtymologyGraphService:
             return None
     
     async def store_etymology(self, word: str, roots: List[Dict]):
-        """Store etymology data in graph"""
+        """Store etymology data in graph, preserving enriched properties"""
         if not roots:
-            # Store word with no roots
+            # Store word with no roots, preserve existing properties
             async with self.driver.session() as session:
                 await session.run("""
                     MERGE (w:EnglishWord {name: $word})
@@ -76,11 +79,13 @@ class EtymologyGraphService:
                 MERGE (w:EnglishWord {name: $word})
                 WITH w
                 UNWIND $roots as root
-                MERGE (r:GreekRoot {
-                    name: root.name,
-                    transliteration: root.transliteration,
-                    meaning: root.meaning
-                })
+                MERGE (r:GreekRoot {name: root.name})
+                ON CREATE SET 
+                    r.transliteration = root.transliteration,
+                    r.meaning = root.meaning
+                ON MATCH SET 
+                    r.transliteration = COALESCE(r.transliteration, root.transliteration),
+                    r.meaning = COALESCE(r.meaning, root.meaning)
                 MERGE (w)-[:DERIVES_FROM]->(r)
             """, word=word.lower(), roots=roots)
     
