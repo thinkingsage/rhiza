@@ -1,4 +1,6 @@
 <script>
+  import { fade, slide } from 'svelte/transition';
+  
   // This block contains our JavaScript logic
   let wordToSearch = '';
   let isLoading = false;
@@ -17,7 +19,9 @@
       const response = await fetch(`http://localhost:8000/word/${wordToSearch.trim()}`);
 
       if (!response.ok) {
-        throw new Error(`An error occurred: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.detail || `Server error (${response.status})`;
+        throw new Error(errorMsg);
       }
 
       searchResult = await response.json();
@@ -120,7 +124,7 @@
     </div>
 
     {#if searchResult && searchResult.roots.length > 0}
-      <div class="result">
+      <div class="result" transition:fade={{ duration: 600 }}>
         <h2>{searchResult.name}</h2>
         <ul>
           {#each searchResult.roots as root}
@@ -137,13 +141,18 @@
           </button>
         {/if}
       </div>
+    {:else if searchResult && searchResult.roots.length === 0}
+      <div class="result no-roots" transition:fade={{ duration: 600 }}>
+        <h2>{searchResult.name}</h2>
+        <p class="no-roots-message">No Greek roots found for this word.</p>
+      </div>
     {/if}
 
     {#if showGraphViz}
-      <div class="graph-container">
+      <div class="graph-container" transition:slide={{ duration: 500 }} on:introend={() => document.querySelector('.graph-container').scrollIntoView({ behavior: 'smooth', block: 'start' })}>
         <h3>Etymology Graph</h3>
         <div id="graph-viz"></div>
-        <button on:click={() => showGraphViz = false}>Close Graph</button>
+        <button class="graph-btn" on:click={() => showGraphViz = false}>Close Graph</button>
       </div>
     {/if}
 
@@ -152,97 +161,3 @@
     {/if}
   </div>
 </main>
-
-<style>
-  main {
-    font-family: var(--font-sans);
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding-top: 5rem;
-    min-height: 100vh;
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    background-attachment: fixed;
-  }
-
-  .card {
-    background: linear-gradient(145deg, #ffffff 0%, #fefefe 100%);
-    padding: 2.5rem;
-    border-radius: 16px;
-    box-shadow: 
-      0 10px 25px rgba(0, 0, 0, 0.1),
-      0 4px 10px rgba(0, 0, 0, 0.05),
-      inset 0 1px 0 rgba(255, 255, 255, 0.9);
-    width: 100%;
-    max-width: 500px;
-    text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
-  }
-
-  h1 {
-    font-family: var(--font-serif);
-    color: #333;
-    font-weight: 600;
-    font-size: 2.5rem;
-  }
-
-  p {
-    color: #666;
-    margin-bottom: 2rem;
-  }
-
-  .search-container {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  input {
-    flex-grow: 1;
-    padding: 0.75rem;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 1rem;
-    font-family: var(--font-sans);
-  }
-
-  button:disabled {
-    background-color: #aaa;
-    cursor: not-allowed;
-  }
-  
-  .result {
-    text-align: left;
-    margin-top: 2rem;
-  }
-
-  .result h2 {
-    font-family: var(--font-serif);
-    text-transform: capitalize;
-  }
-
-  .result ul {
-    list-style-type: none;
-    padding: 0;
-  }
-
-  .result li {
-    background-color: #f9f9f9;
-    padding: 0.75rem;
-    border: 1px solid #eee;
-    border-radius: 5px;
-    margin-bottom: 0.5rem;
-  }
-
-  .result li strong {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: 1.1em;
-  }
-  
-  .error {
-    color: #d93025;
-    margin-top: 1rem;
-  }
-</style>
