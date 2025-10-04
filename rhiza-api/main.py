@@ -1,12 +1,21 @@
+"""
+Rhiza API - Greek Etymology Explorer
+
+A FastAPI application for analyzing English words to discover their Ancient Greek roots
+using AI-powered analysis and graph database storage.
+"""
+
 import os
 import json
 import uuid
 import re
+import asyncio
+from typing import List, Dict, Optional
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import List
 import google.generativeai as genai
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
@@ -14,9 +23,10 @@ import structlog
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+
 from services.neo4j_service import EtymologyGraphService
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
 # Configure structured logging
@@ -44,12 +54,33 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 AWS_REGION = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
 AWS_BEARER_TOKEN = os.environ.get("AWS_BEARER_TOKEN_BEDROCK")
 
+# CORS configuration
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000").split(",")
+
+# Handle wildcard for development
+if ALLOWED_ORIGINS == ["*"]:
+    ALLOWED_ORIGINS = ["*"]
+
+# --- Pydantic Models ---
+
+class GreekRoot(BaseModel):
+    name: str = Field(..., description="The root in Ancient Greek script.")
+    transliteration: str = Field(..., description="The common English transliteration.")
+    meaning: str = Field(..., description="A concise English meaning.")
+
+class WordResponse(BaseModel):
+    name: str = Field(..., description="The original English word provided.")
+    roots: List[GreekRoot] = Field(..., description="An array of root objects.")
+
+# --- AI Configuration ---
+
 # Configure Gemini if API key is available
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
     logger.info("Gemini API configured")
 
 # Initialize Bedrock client with bearer token
+bedrock_client = None
 try:
     if AWS_BEARER_TOKEN:
         bedrock_client = boto3.client(
@@ -61,11 +92,11 @@ try:
         )
         logger.info(f"Bedrock client initialized with bearer token for region {AWS_REGION}")
     else:
-        bedrock_client = None
         logger.warning("AWS_BEARER_TOKEN_BEDROCK not provided, Bedrock unavailable")
 except Exception as e:
     logger.warning(f"Failed to initialize Bedrock client: {e}")
-    bedrock_client = None
+
+# --- FastAPI App Configuration ---
 
 app = FastAPI(
     title="Project Logos API",
@@ -92,13 +123,6 @@ async def add_request_id(request: Request, call_next):
     response.headers["X-Request-ID"] = request_id
     return response
 
-# CORS configuration
-ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000").split(",")
-
-# Handle wildcard for development
-if ALLOWED_ORIGINS == ["*"]:
-    ALLOWED_ORIGINS = ["*"]
-
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -111,76 +135,8 @@ app.add_middleware(
 # Initialize Neo4j service
 graph_service = EtymologyGraphService()
 
-@app.on_event("startup")
-async def startup_event():
-    # ASCII art Rho logo
-    rho_logo = """
-    ██████╗ ██╗  ██╗██╗███████╗ █████╗ 
-    ██╔══██╗██║  ██║██║╚══███╔╝██╔══██╗
-    ██████╔╝███████║██║  ███╔╝ ███████║
-    ██╔══██╗██╔══██║██║ ███╔╝  ██╔══██║
-    ██║  ██║██║  ██║██║███████╗██║  ██║
-    ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝╚═╝  ╚═╝
-    
-    🏛️  Greek Etymology API v1.0.0
-    🔗 Neo4j Database | 🤖 AI-Powered Analysis
-    ⚡ Async Operations | 📊 Structured Logging
-    """
-    print(rho_logo, flush=True)
-    
-    logger.info("🚀 Initializing Rhiza API services...")
-    
-    # Database connection with enhanced logging
-    import asyncio
-    max_retries = 10
-    retry_delay = 2
-    
-    logger.info("🔌 Connecting to Neo4j database...")
-    for attempt in range(max_retries):
-        try:
-            await graph_service.create_indexes()
-            logger.info("✅ Database connected and indexes created successfully")
-            break
-        except Exception as e:
-            if attempt < max_retries - 1:
-                logger.warning(f"⚠️  Database connection failed (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s", error=str(e))
-                await asyncio.sleep(retry_delay)
-            else:
-                logger.error("❌ Failed to connect to database after all retries", error=str(e))
-                raise
-    
-    # AI providers status
-    ai_status = []
-    if bedrock_client:
-        ai_status.append("🧠 AWS Bedrock (Claude Sonnet 4)")
-    if GEMINI_API_KEY:
-        ai_status.append("🔮 Google Gemini")
-    
-    if ai_status:
-        logger.info(f"🤖 AI providers ready: {', '.join(ai_status)}")
-    else:
-        logger.warning("⚠️  No AI providers configured")
-    
-    logger.info("🎯 Rhiza API ready to explore Greek etymology!")
+# --- System Prompt ---
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    await graph_service.close()
-
-# --- Pydantic Models for Data Validation ---
-
-class GreekRoot(BaseModel):
-    name: str = Field(..., description="The root in Ancient Greek script.")
-    transliteration: str = Field(..., description="The common English transliteration.")
-    meaning: str = Field(..., description="A concise English meaning.")
-
-class WordResponse(BaseModel):
-    name: str = Field(..., description="The original English word provided.")
-    roots: List[GreekRoot] = Field(..., description="An array of root objects.")
-
-
-# --- System Prompt for the AI Model ---
-# This is the detailed prompt we crafted earlier.
 SYSTEM_PROMPT = """
 You are an expert linguist and etymologist with a specialization in Ancient Greek and its influence on the English language. Your sole function is to analyze an English word and provide its Greek root components in a structured JSON format.
 
@@ -197,14 +153,11 @@ Given an English word, identify its primary Ancient Greek root(s). For each root
 4.  If the word is not of Greek origin, the `roots` array MUST be empty (`[]`).
 5.  If the word has multiple Greek roots, include an object for each root in the `roots` array.
 
-**Examples:**
-... (Examples from previous prompt omitted for brevity) ...
-
 ---
 Now, analyze the following word:
 """
 
-# --- Helper Functions ---
+# --- Utility Functions ---
 
 def is_valid_english_word(word: str) -> bool:
     """Enhanced validation for English words with security checks."""
@@ -267,7 +220,7 @@ def sanitize_input(text: str) -> str:
     # Limit length to prevent DoS
     return text[:100].strip()
 
-# --- AI Helper Functions ---
+# --- AI Service Functions ---
 
 async def call_bedrock_ai(word: str) -> dict:
     """Call AWS Bedrock Claude model for etymology analysis."""
@@ -357,7 +310,94 @@ async def get_ai_etymology(word: str) -> dict:
     logger.warning("No AI providers configured, returning empty result", word=word)
     return {"name": word, "roots": []}
 
-# --- API Endpoint ---
+# --- Event Handlers ---
+
+@app.on_event("startup")
+async def startup_event():
+    # ASCII art Rho logo
+    rho_logo = """
+    ██████╗ ██╗  ██╗██╗███████╗ █████╗ 
+    ██╔══██╗██║  ██║██║╚══███╔╝██╔══██╗
+    ██████╔╝███████║██║  ███╔╝ ███████║
+    ██╔══██╗██╔══██║██║ ███╔╝  ██╔══██║
+    ██║  ██║██║  ██║██║███████╗██║  ██║
+    ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝╚═╝  ╚═╝
+    
+    🏛️  Greek Etymology API v1.0.0
+    🔗 Neo4j Database | 🤖 AI-Powered Analysis
+    ⚡ Async Operations | 📊 Structured Logging
+    """
+    print(rho_logo, flush=True)
+    
+    logger.info("🚀 Initializing Rhiza API services...")
+    
+    # Database connection with enhanced logging
+    max_retries = 10
+    retry_delay = 2
+    
+    logger.info("🔌 Connecting to Neo4j database...")
+    for attempt in range(max_retries):
+        try:
+            await graph_service.create_indexes()
+            logger.info("✅ Database connected and indexes created successfully")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"⚠️  Database connection failed (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s", error=str(e))
+                await asyncio.sleep(retry_delay)
+            else:
+                logger.error("❌ Failed to connect to database after all retries", error=str(e))
+                raise
+    
+    # AI providers status
+    ai_status = []
+    if bedrock_client:
+        ai_status.append("🧠 AWS Bedrock (Claude Sonnet 4)")
+    if GEMINI_API_KEY:
+        ai_status.append("🔮 Google Gemini")
+    
+    if ai_status:
+        logger.info(f"🤖 AI providers ready: {', '.join(ai_status)}")
+    else:
+        logger.warning("⚠️  No AI providers configured")
+    
+    logger.info("🎯 Rhiza API ready to explore Greek etymology!")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await graph_service.close()
+
+# --- API Endpoints ---
+
+@app.get("/health")
+async def health_check():
+    """Basic health check endpoint"""
+    return {"status": "healthy"}
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness check - verifies dependencies are available"""
+    try:
+        # Test Neo4j connection
+        async with graph_service.driver.session() as session:
+            await session.run("RETURN 1")
+        
+        # Test AI providers (non-blocking)
+        ai_status = {
+            "bedrock": bedrock_client is not None,
+            "gemini": GEMINI_API_KEY is not None
+        }
+        
+        return {
+            "status": "ready",
+            "dependencies": {
+                "neo4j": "healthy",
+                "ai_providers": ai_status
+            }
+        }
+    except Exception as e:
+        logger.error("Readiness check failed", error=str(e))
+        raise HTTPException(status_code=503, detail="Service not ready")
 
 @app.get("/word/{english_word}", response_model=WordResponse)
 @limiter.limit("30/minute")  # 30 requests per minute per IP
@@ -429,58 +469,6 @@ async def get_word_roots(request: Request, english_word: str, response: Response
         else:
             raise HTTPException(status_code=500, detail="An unexpected error occurred. Please try again.")
 
-@app.get("/health")
-async def health_check():
-    """Basic health check endpoint"""
-    return {"status": "healthy"}
-
-@app.get("/ready")
-async def readiness_check():
-    """Readiness check - verifies dependencies are available"""
-    try:
-        # Test Neo4j connection
-        async with graph_service.driver.session() as session:
-            await session.run("RETURN 1")
-        
-        # Test AI providers (non-blocking)
-        ai_status = {
-            "bedrock": bedrock_client is not None,
-            "gemini": GEMINI_API_KEY is not None
-        }
-        
-        return {
-            "status": "ready",
-            "dependencies": {
-                "neo4j": "healthy",
-                "ai_providers": ai_status
-            }
-        }
-    except Exception as e:
-        logger.error("Readiness check failed", error=str(e))
-        raise HTTPException(status_code=503, detail="Service not ready")
-
-@app.get("/root/{root_name}/words")
-async def get_words_from_root(root_name: str):
-    """
-    Find all words that derive from a specific Greek root.
-    """
-    # Sanitize and validate input
-    root_name = sanitize_input(root_name)
-    
-    if not root_name or len(root_name) > 100:
-        raise HTTPException(status_code=400, detail="Invalid root name")
-    
-    # Allow Greek characters, Latin characters, and common transliteration symbols
-    if not re.match(r"^[\u0370-\u03FF\u1F00-\u1FFFa-zA-Z\s'-]+$", root_name):
-        raise HTTPException(status_code=400, detail="Invalid characters in root name")
-    
-    try:
-        words = await graph_service.get_related_words(root_name.strip())
-        return {"root": root_name, "words": words}
-    except Exception as e:
-        logger.error("Error in related words request", root=root_name, error=str(e))
-        raise HTTPException(status_code=500, detail="Unable to retrieve related words")
-
 @app.get("/word/{english_word}/graph")
 @limiter.limit("60/minute")  # 60 requests per minute per IP (lighter endpoint)
 async def get_word_graph(request: Request, english_word: str, response: Response):
@@ -522,3 +510,25 @@ async def get_word_graph(request: Request, english_word: str, response: Response
     except Exception as e:
         logger.error("Error in graph request", word=normalized_word, error=str(e))
         raise HTTPException(status_code=500, detail="Unable to generate graph data")
+
+@app.get("/root/{root_name}/words")
+async def get_words_from_root(root_name: str):
+    """
+    Find all words that derive from a specific Greek root.
+    """
+    # Sanitize and validate input
+    root_name = sanitize_input(root_name)
+    
+    if not root_name or len(root_name) > 100:
+        raise HTTPException(status_code=400, detail="Invalid root name")
+    
+    # Allow Greek characters, Latin characters, and common transliteration symbols
+    if not re.match(r"^[\u0370-\u03FF\u1F00-\u1FFFa-zA-Z\s'-]+$", root_name):
+        raise HTTPException(status_code=400, detail="Invalid characters in root name")
+    
+    try:
+        words = await graph_service.get_related_words(root_name.strip())
+        return {"root": root_name, "words": words}
+    except Exception as e:
+        logger.error("Error in related words request", root=root_name, error=str(e))
+        raise HTTPException(status_code=500, detail="Unable to retrieve related words")
