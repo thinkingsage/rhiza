@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy requirements and install dependencies
 COPY pyproject.toml ./
-RUN pip install fastapi uvicorn python-dotenv google-generativeai neo4j boto3 structlog
+RUN pip install fastapi uvicorn python-dotenv google-generativeai neo4j boto3 structlog slowapi
 
 # Copy the rest of the application's code
 COPY . .

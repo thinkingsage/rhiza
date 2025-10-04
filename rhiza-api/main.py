@@ -11,6 +11,9 @@ import google.generativeai as genai
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 import structlog
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from services.neo4j_service import EtymologyGraphService
 
 # Load environment variables from .env file
@@ -69,6 +72,11 @@ app = FastAPI(
     description="API for exploring the Greek roots of English words.",
     version="1.0.0",
 )
+
+# Configure rate limiter
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Add request ID middleware
 @app.middleware("http")
@@ -247,7 +255,8 @@ async def get_ai_etymology(word: str) -> dict:
 # --- API Endpoint ---
 
 @app.get("/word/{english_word}", response_model=WordResponse)
-async def get_word_roots(english_word: str, response: Response):
+@limiter.limit("30/minute")  # 30 requests per minute per IP
+async def get_word_roots(request: Request, english_word: str, response: Response):
     """
     Analyzes an English word to find its Ancient Greek roots.
     Checks graph database first, falls back to AI if not found.
@@ -275,6 +284,9 @@ async def get_word_roots(english_word: str, response: Response):
         cached_result = graph_service.find_word_roots(english_word)
         if cached_result:
             logger.info("Found cached result", word=english_word, source="graph_db")
+            # Cache for 1 hour since data is stable
+            response.headers["Cache-Control"] = "public, max-age=3600"
+            response.headers["ETag"] = f'"{hash(str(cached_result))}"'
             return cached_result
         
         # If not in graph, use AI to analyze the word
@@ -287,6 +299,10 @@ async def get_word_roots(english_word: str, response: Response):
             logger.info("Stored etymology in graph", word=english_word, roots_count=len(result["roots"]))
         else:
             logger.info("Stored word with no roots in graph", word=english_word)
+        
+        # Cache new results for 1 hour
+        response.headers["Cache-Control"] = "public, max-age=3600"
+        response.headers["ETag"] = f'"{hash(str(result))}"'
         
         logger.info("Etymology request completed", word=english_word, roots_found=len(result.get("roots", [])))
         return result
@@ -314,7 +330,8 @@ async def get_words_from_root(root_name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/word/{english_word}/graph")
-async def get_word_graph(english_word: str):
+@limiter.limit("60/minute")  # 60 requests per minute per IP (lighter endpoint)
+async def get_word_graph(request: Request, english_word: str, response: Response):
     """
     Get graph visualization data for a word and its roots.
     """
@@ -331,8 +348,15 @@ async def get_word_graph(english_word: str):
             
             record = result.single()
             if record and record["graph"]["nodes"]:
-                return record["graph"]
+                graph_data = record["graph"]
+                # Cache graph data for 1 hour
+                response.headers["Cache-Control"] = "public, max-age=3600"
+                response.headers["ETag"] = f'"{hash(str(graph_data))}"'
+                return graph_data
             else:
-                return {"nodes": [], "links": []}
+                empty_result = {"nodes": [], "links": []}
+                # Cache empty results for shorter time (15 minutes)
+                response.headers["Cache-Control"] = "public, max-age=900"
+                return empty_result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
