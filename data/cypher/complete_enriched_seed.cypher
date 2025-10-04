@@ -1,195 +1,292 @@
-// Complete enriched seed data - clear and reload everything
-
-// Clear all existing data
+// Clear existing data
 MATCH (n) DETACH DELETE n;
 
-// Create enriched Greek roots
-MERGE (r1:GreekRoot {
-  name: "φίλος", transliteration: "philos", meaning: "loving, friend",
-  category: "emotion", frequency: "high", etymology_period: "classical", part_of_speech: "adjective"
+// Create Greek roots with enriched properties
+CREATE (philos:GreekRoot {
+  name: 'φίλος',
+  transliteration: 'philos',
+  meaning: 'loving, friend',
+  category: 'emotion',
+  frequency: 'high',
+  part_of_speech: 'adjective'
 });
 
-MERGE (r2:GreekRoot {
-  name: "σοφία", transliteration: "sophia", meaning: "wisdom",
-  category: "abstract_concept", frequency: "high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (sophia:GreekRoot {
+  name: 'σοφία',
+  transliteration: 'sophia',
+  meaning: 'wisdom',
+  category: 'abstract_concept',
+  frequency: 'medium',
+  part_of_speech: 'noun'
 });
 
-MERGE (r3:GreekRoot {
-  name: "δῆμος", transliteration: "demos", meaning: "people",
-  category: "political", frequency: "high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (demos:GreekRoot {
+  name: 'δῆμος',
+  transliteration: 'demos',
+  meaning: 'people',
+  category: 'political',
+  frequency: 'high',
+  part_of_speech: 'noun'
 });
 
-MERGE (r4:GreekRoot {
-  name: "κρατία", transliteration: "kratia", meaning: "rule, power",
-  category: "political", frequency: "high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (kratia:GreekRoot {
+  name: 'κρατία',
+  transliteration: 'kratia',
+  meaning: 'power, rule',
+  category: 'political',
+  frequency: 'medium',
+  part_of_speech: 'noun'
 });
 
-MERGE (r5:GreekRoot {
-  name: "λόγος", transliteration: "logos", meaning: "word, study, reason",
-  category: "academic", frequency: "very_high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (bios:GreekRoot {
+  name: 'βίος',
+  transliteration: 'bios',
+  meaning: 'life',
+  category: 'nature',
+  frequency: 'high',
+  part_of_speech: 'noun'
 });
 
-MERGE (r6:GreekRoot {
-  name: "βίος", transliteration: "bios", meaning: "life",
-  category: "nature", frequency: "high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (logos:GreekRoot {
+  name: 'λόγος',
+  transliteration: 'logos',
+  meaning: 'word, study, reason',
+  category: 'academic',
+  frequency: 'very_high',
+  part_of_speech: 'noun'
 });
 
-MERGE (r7:GreekRoot {
-  name: "γραφή", transliteration: "graphe", meaning: "writing",
-  category: "communication", frequency: "very_high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (psyche:GreekRoot {
+  name: 'ψυχή',
+  transliteration: 'psyche',
+  meaning: 'soul, mind, spirit',
+  category: 'psychology',
+  frequency: 'high',
+  part_of_speech: 'noun'
 });
 
-MERGE (r8:GreekRoot {
-  name: "ψυχή", transliteration: "psyche", meaning: "soul, mind",
-  category: "psychology", frequency: "high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (theos:GreekRoot {
+  name: 'θεός',
+  transliteration: 'theos',
+  meaning: 'god',
+  category: 'religion',
+  frequency: 'high',
+  part_of_speech: 'noun'
 });
 
-MERGE (r9:GreekRoot {
-  name: "θεός", transliteration: "theos", meaning: "god",
-  category: "religion", frequency: "high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (anthropos:GreekRoot {
+  name: 'ἄνθρωπος',
+  transliteration: 'anthropos',
+  meaning: 'human, person',
+  category: 'human',
+  frequency: 'medium',
+  part_of_speech: 'noun'
 });
 
-MERGE (r10:GreekRoot {
-  name: "ἄνθρωπος", transliteration: "anthropos", meaning: "human",
-  category: "human", frequency: "high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (geo:GreekRoot {
+  name: 'γῆ',
+  transliteration: 'geo',
+  meaning: 'earth, land',
+  category: 'nature',
+  frequency: 'high',
+  part_of_speech: 'noun'
 });
 
-MERGE (r11:GreekRoot {
-  name: "γῆ", transliteration: "geo", meaning: "earth",
-  category: "nature", frequency: "high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (graphe:GreekRoot {
+  name: 'γραφή',
+  transliteration: 'graphe',
+  meaning: 'writing, drawing',
+  category: 'communication',
+  frequency: 'high',
+  part_of_speech: 'noun'
 });
 
-MERGE (r12:GreekRoot {
-  name: "τέχνη", transliteration: "techne", meaning: "art, skill",
-  category: "skill", frequency: "high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (an:GreekRoot {
+  name: 'ἀν-',
+  transliteration: 'an-',
+  meaning: 'without, not',
+  category: 'abstract_concept',
+  frequency: 'high',
+  part_of_speech: 'prefix'
 });
 
-MERGE (r13:GreekRoot {
-  name: "φόβος", transliteration: "phobos", meaning: "fear",
-  category: "emotion", frequency: "high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (arche:GreekRoot {
+  name: 'ἀρχή',
+  transliteration: 'arche',
+  meaning: 'rule, government, authority',
+  category: 'political',
+  frequency: 'medium',
+  part_of_speech: 'noun'
 });
 
-MERGE (r14:GreekRoot {
-  name: "μικρός", transliteration: "mikros", meaning: "small",
-  category: "size", frequency: "high", etymology_period: "classical", part_of_speech: "adjective"
+CREATE (hieros:GreekRoot {
+  name: 'ἱερός',
+  transliteration: 'hieros',
+  meaning: 'sacred, holy',
+  category: 'religion',
+  frequency: 'medium',
+  part_of_speech: 'adjective'
 });
 
-MERGE (r15:GreekRoot {
-  name: "τῆλε", transliteration: "tele", meaning: "far, distant",
-  category: "distance", frequency: "medium", etymology_period: "classical", part_of_speech: "adverb"
+CREATE (para:GreekRoot {
+  name: 'παρά',
+  transliteration: 'para',
+  meaning: 'beside, beyond, abnormal',
+  category: 'spatial',
+  frequency: 'high',
+  part_of_speech: 'preposition'
 });
 
-MERGE (r16:GreekRoot {
-  name: "φωνή", transliteration: "phone", meaning: "sound, voice",
-  category: "communication", frequency: "high", etymology_period: "classical", part_of_speech: "noun"
+CREATE (nous:GreekRoot {
+  name: 'νοῦς',
+  transliteration: 'nous',
+  meaning: 'mind, intellect',
+  category: 'psychology',
+  frequency: 'medium',
+  part_of_speech: 'noun'
 });
 
-MERGE (r17:GreekRoot {
-  name: "σκοπεῖν", transliteration: "skopein", meaning: "to look, examine",
-  category: "perception", frequency: "high", etymology_period: "classical", part_of_speech: "verb"
+CREATE (pharmakon:GreekRoot {
+  name: 'φάρμακον',
+  transliteration: 'pharmakon',
+  meaning: 'drug, medicine, poison',
+  category: 'science',
+  frequency: 'medium',
+  part_of_speech: 'noun'
 });
 
-// Create enriched English words
-MERGE (w1:EnglishWord {
-  name: "philosophy", definition: "the study of fundamental questions about existence, knowledge, values",
-  first_use_year: 1300, complexity_level: "advanced", field: "humanities", syllable_count: 4, modern_usage: "academic"
+CREATE (polys:GreekRoot {
+  name: 'πολύς',
+  transliteration: 'polys',
+  meaning: 'many, much',
+  category: 'qualities',
+  frequency: 'high',
+  part_of_speech: 'adjective'
 });
 
-MERGE (w2:EnglishWord {
-  name: "democracy", definition: "a system of government by the whole population",
-  first_use_year: 1576, complexity_level: "intermediate", field: "politics", syllable_count: 4, modern_usage: "common"
+CREATE (gamos:GreekRoot {
+  name: 'γάμος',
+  transliteration: 'gamos',
+  meaning: 'marriage',
+  category: 'social',
+  frequency: 'medium',
+  part_of_speech: 'noun'
 });
 
-MERGE (w3:EnglishWord {
-  name: "biology", definition: "the scientific study of living organisms",
-  first_use_year: 1819, complexity_level: "intermediate", field: "science", syllable_count: 4, modern_usage: "common"
+CREATE (dia:GreekRoot {
+  name: 'διά',
+  transliteration: 'dia',
+  meaning: 'through, across, apart',
+  category: 'spatial',
+  frequency: 'high',
+  part_of_speech: 'preposition'
 });
 
-MERGE (w4:EnglishWord {
-  name: "psychology", definition: "the scientific study of mind and behavior",
-  first_use_year: 1693, complexity_level: "intermediate", field: "science", syllable_count: 4, modern_usage: "common"
+CREATE (spora:GreekRoot {
+  name: 'σπορά',
+  transliteration: 'spora',
+  meaning: 'sowing, scattering of seed',
+  category: 'nature',
+  frequency: 'low',
+  part_of_speech: 'noun'
 });
 
-MERGE (w5:EnglishWord {
-  name: "theology", definition: "the study of the nature of God and religious belief",
-  first_use_year: 1362, complexity_level: "advanced", field: "religion", syllable_count: 4, modern_usage: "academic"
+CREATE (anti:GreekRoot {
+  name: 'ἀντί',
+  transliteration: 'anti',
+  meaning: 'against, opposite',
+  category: 'abstract_concept',
+  frequency: 'high',
+  part_of_speech: 'preposition'
 });
 
-MERGE (w6:EnglishWord {
-  name: "anthropology", definition: "the study of humankind",
-  first_use_year: 1593, complexity_level: "advanced", field: "science", syllable_count: 5, modern_usage: "academic"
-});
-
-MERGE (w7:EnglishWord {
-  name: "geography", definition: "the study of the physical features of the earth",
-  first_use_year: 1540, complexity_level: "intermediate", field: "science", syllable_count: 4, modern_usage: "common"
-});
-
-MERGE (w8:EnglishWord {
-  name: "technology", definition: "the application of scientific knowledge for practical purposes",
-  first_use_year: 1615, complexity_level: "intermediate", field: "science", syllable_count: 4, modern_usage: "very_common"
-});
-
-MERGE (w9:EnglishWord {
-  name: "phobia", definition: "an extreme or irrational fear of something",
-  first_use_year: 1786, complexity_level: "intermediate", field: "psychology", syllable_count: 3, modern_usage: "common"
-});
-
-MERGE (w10:EnglishWord {
-  name: "microscope", definition: "an instrument for viewing very small objects",
-  first_use_year: 1656, complexity_level: "intermediate", field: "science", syllable_count: 3, modern_usage: "common"
-});
-
-MERGE (w11:EnglishWord {
-  name: "telephone", definition: "a device for transmitting sound over distances",
-  first_use_year: 1835, complexity_level: "basic", field: "technology", syllable_count: 3, modern_usage: "very_common"
-});
-
-MERGE (w12:EnglishWord {
-  name: "biography", definition: "an account of someone's life written by someone else",
-  first_use_year: 1683, complexity_level: "intermediate", field: "literature", syllable_count: 4, modern_usage: "common"
-});
-
-MERGE (w13:EnglishWord {
-  name: "philosopher", definition: "a person engaged in or learned in philosophy",
-  first_use_year: 1297, complexity_level: "advanced", field: "humanities", syllable_count: 4, modern_usage: "academic"
-});
+// Create English words
+CREATE (philosophy:EnglishWord {name: 'philosophy'});
+CREATE (democracy:EnglishWord {name: 'democracy'});
+CREATE (biology:EnglishWord {name: 'biology'});
+CREATE (psychology:EnglishWord {name: 'psychology'});
+CREATE (theology:EnglishWord {name: 'theology'});
+CREATE (anthropology:EnglishWord {name: 'anthropology'});
+CREATE (geography:EnglishWord {name: 'geography'});
+CREATE (technology:EnglishWord {name: 'technology'});
+CREATE (phobia:EnglishWord {name: 'phobia'});
+CREATE (microscope:EnglishWord {name: 'microscope'});
+CREATE (anarchy:EnglishWord {name: 'anarchy'});
+CREATE (hierarchy:EnglishWord {name: 'hierarchy'});
+CREATE (paranoia:EnglishWord {name: 'paranoia'});
+CREATE (pharmacy:EnglishWord {name: 'pharmacy'});
+CREATE (polygamy:EnglishWord {name: 'polygamy'});
+CREATE (diaspora:EnglishWord {name: 'diaspora'});
+CREATE (antimatter:EnglishWord {name: 'antimatter'});
+CREATE (geology:EnglishWord {name: 'geology'});
+CREATE (biography:EnglishWord {name: 'biography'});
+CREATE (philanthropist:EnglishWord {name: 'philanthropist'});
+CREATE (bibliophile:EnglishWord {name: 'bibliophile'});
+CREATE (sophisticated:EnglishWord {name: 'sophisticated'});
+CREATE (demographic:EnglishWord {name: 'demographic'});
+CREATE (epidemic:EnglishWord {name: 'epidemic'});
+CREATE (antibiotic:EnglishWord {name: 'antibiotic'});
 
 // Create relationships
-MERGE (w1)-[:DERIVES_FROM {strength: 0.9, position: "prefix"}]->(r1);
-MERGE (w1)-[:DERIVES_FROM {strength: 0.9, position: "suffix"}]->(r2);
+MATCH (philosophy:EnglishWord {name: 'philosophy'}), (philos:GreekRoot {transliteration: 'philos'}), (sophia:GreekRoot {transliteration: 'sophia'})
+CREATE (philosophy)-[:DERIVES_FROM]->(philos), (philosophy)-[:DERIVES_FROM]->(sophia);
 
-MERGE (w2)-[:DERIVES_FROM {strength: 0.9, position: "prefix"}]->(r3);
-MERGE (w2)-[:DERIVES_FROM {strength: 0.9, position: "suffix"}]->(r4);
+MATCH (democracy:EnglishWord {name: 'democracy'}), (demos:GreekRoot {transliteration: 'demos'}), (kratia:GreekRoot {transliteration: 'kratia'})
+CREATE (democracy)-[:DERIVES_FROM]->(demos), (democracy)-[:DERIVES_FROM]->(kratia);
 
-MERGE (w3)-[:DERIVES_FROM {strength: 0.95, position: "prefix"}]->(r6);
-MERGE (w3)-[:DERIVES_FROM {strength: 0.95, position: "suffix"}]->(r5);
+MATCH (biology:EnglishWord {name: 'biology'}), (bios:GreekRoot {transliteration: 'bios'}), (logos:GreekRoot {transliteration: 'logos'})
+CREATE (biology)-[:DERIVES_FROM]->(bios), (biology)-[:DERIVES_FROM]->(logos);
 
-MERGE (w4)-[:DERIVES_FROM {strength: 0.9, position: "prefix"}]->(r8);
-MERGE (w4)-[:DERIVES_FROM {strength: 0.9, position: "suffix"}]->(r5);
+MATCH (psychology:EnglishWord {name: 'psychology'}), (psyche:GreekRoot {transliteration: 'psyche'}), (logos:GreekRoot {transliteration: 'logos'})
+CREATE (psychology)-[:DERIVES_FROM]->(psyche), (psychology)-[:DERIVES_FROM]->(logos);
 
-MERGE (w5)-[:DERIVES_FROM {strength: 0.9, position: "prefix"}]->(r9);
-MERGE (w5)-[:DERIVES_FROM {strength: 0.9, position: "suffix"}]->(r5);
+MATCH (theology:EnglishWord {name: 'theology'}), (theos:GreekRoot {transliteration: 'theos'}), (logos:GreekRoot {transliteration: 'logos'})
+CREATE (theology)-[:DERIVES_FROM]->(theos), (theology)-[:DERIVES_FROM]->(logos);
 
-MERGE (w6)-[:DERIVES_FROM {strength: 0.9, position: "prefix"}]->(r10);
-MERGE (w6)-[:DERIVES_FROM {strength: 0.9, position: "suffix"}]->(r5);
+MATCH (anthropology:EnglishWord {name: 'anthropology'}), (anthropos:GreekRoot {transliteration: 'anthropos'}), (logos:GreekRoot {transliteration: 'logos'})
+CREATE (anthropology)-[:DERIVES_FROM]->(anthropos), (anthropology)-[:DERIVES_FROM]->(logos);
 
-MERGE (w7)-[:DERIVES_FROM {strength: 0.9, position: "prefix"}]->(r11);
-MERGE (w7)-[:DERIVES_FROM {strength: 0.9, position: "suffix"}]->(r7);
+MATCH (geology:EnglishWord {name: 'geology'}), (geo:GreekRoot {transliteration: 'geo'}), (logos:GreekRoot {transliteration: 'logos'})
+CREATE (geology)-[:DERIVES_FROM]->(geo), (geology)-[:DERIVES_FROM]->(logos);
 
-MERGE (w8)-[:DERIVES_FROM {strength: 0.9, position: "prefix"}]->(r12);
-MERGE (w8)-[:DERIVES_FROM {strength: 0.9, position: "suffix"}]->(r5);
+MATCH (biography:EnglishWord {name: 'biography'}), (bios:GreekRoot {transliteration: 'bios'}), (graphe:GreekRoot {transliteration: 'graphe'})
+CREATE (biography)-[:DERIVES_FROM]->(bios), (biography)-[:DERIVES_FROM]->(graphe);
 
-MERGE (w9)-[:DERIVES_FROM {strength: 0.95, position: "root"}]->(r13);
+MATCH (anarchy:EnglishWord {name: 'anarchy'}), (an:GreekRoot {transliteration: 'an-'}), (arche:GreekRoot {transliteration: 'arche'})
+CREATE (anarchy)-[:DERIVES_FROM]->(an), (anarchy)-[:DERIVES_FROM]->(arche);
 
-MERGE (w10)-[:DERIVES_FROM {strength: 0.9, position: "prefix"}]->(r14);
-MERGE (w10)-[:DERIVES_FROM {strength: 0.9, position: "suffix"}]->(r17);
+MATCH (hierarchy:EnglishWord {name: 'hierarchy'}), (hieros:GreekRoot {transliteration: 'hieros'}), (arche:GreekRoot {transliteration: 'arche'})
+CREATE (hierarchy)-[:DERIVES_FROM]->(hieros), (hierarchy)-[:DERIVES_FROM]->(arche);
 
-MERGE (w11)-[:DERIVES_FROM {strength: 0.9, position: "prefix"}]->(r15);
-MERGE (w11)-[:DERIVES_FROM {strength: 0.9, position: "suffix"}]->(r16);
+MATCH (paranoia:EnglishWord {name: 'paranoia'}), (para:GreekRoot {transliteration: 'para'}), (nous:GreekRoot {transliteration: 'nous'})
+CREATE (paranoia)-[:DERIVES_FROM]->(para), (paranoia)-[:DERIVES_FROM]->(nous);
 
-MERGE (w12)-[:DERIVES_FROM {strength: 0.9, position: "prefix"}]->(r6);
-MERGE (w12)-[:DERIVES_FROM {strength: 0.9, position: "suffix"}]->(r7);
+MATCH (pharmacy:EnglishWord {name: 'pharmacy'}), (pharmakon:GreekRoot {transliteration: 'pharmakon'})
+CREATE (pharmacy)-[:DERIVES_FROM]->(pharmakon);
 
-MERGE (w13)-[:DERIVES_FROM {strength: 0.9, position: "prefix"}]->(r1);
-MERGE (w13)-[:DERIVES_FROM {strength: 0.9, position: "suffix"}]->(r2);
+MATCH (polygamy:EnglishWord {name: 'polygamy'}), (polys:GreekRoot {transliteration: 'polys'}), (gamos:GreekRoot {transliteration: 'gamos'})
+CREATE (polygamy)-[:DERIVES_FROM]->(polys), (polygamy)-[:DERIVES_FROM]->(gamos);
+
+MATCH (diaspora:EnglishWord {name: 'diaspora'}), (dia:GreekRoot {transliteration: 'dia'}), (spora:GreekRoot {transliteration: 'spora'})
+CREATE (diaspora)-[:DERIVES_FROM]->(dia), (diaspora)-[:DERIVES_FROM]->(spora);
+
+MATCH (antimatter:EnglishWord {name: 'antimatter'}), (anti:GreekRoot {transliteration: 'anti'})
+CREATE (antimatter)-[:DERIVES_FROM]->(anti);
+
+MATCH (philanthropist:EnglishWord {name: 'philanthropist'}), (philos:GreekRoot {transliteration: 'philos'})
+CREATE (philanthropist)-[:DERIVES_FROM]->(philos);
+
+MATCH (bibliophile:EnglishWord {name: 'bibliophile'}), (philos:GreekRoot {transliteration: 'philos'})
+CREATE (bibliophile)-[:DERIVES_FROM]->(philos);
+
+MATCH (sophisticated:EnglishWord {name: 'sophisticated'}), (sophia:GreekRoot {transliteration: 'sophia'})
+CREATE (sophisticated)-[:DERIVES_FROM]->(sophia);
+
+MATCH (demographic:EnglishWord {name: 'demographic'}), (demos:GreekRoot {transliteration: 'demos'})
+CREATE (demographic)-[:DERIVES_FROM]->(demos);
+
+MATCH (epidemic:EnglishWord {name: 'epidemic'}), (demos:GreekRoot {transliteration: 'demos'})
+CREATE (epidemic)-[:DERIVES_FROM]->(demos);
+
+MATCH (antibiotic:EnglishWord {name: 'antibiotic'}), (bios:GreekRoot {transliteration: 'bios'})
+CREATE (antibiotic)-[:DERIVES_FROM]->(bios);
