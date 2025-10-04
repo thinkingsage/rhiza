@@ -76,9 +76,11 @@ h1, h2, h3, h4, h5, h6 {
 	border-radius: 8px;
 	cursor: pointer;
 	transition: all 0.2s ease;
-	margin-top: 1rem;
+	margin-top: 1.5rem;
 	box-shadow: 0 2px 4px rgba(22, 160, 133, 0.2);
-	float: right;
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 .graph-btn:hover {
@@ -94,22 +96,28 @@ h1, h2, h3, h4, h5, h6 {
 
 .graph-container {
 	margin-top: 2rem;
-	padding: 1.5rem;
-	border: 1px solid #e0e0e0;
-	border-radius: 8px;
-	background: #fafafa;
+	padding: 2rem;
+	background: rgba(255, 255, 255, 0.95);
+	backdrop-filter: blur(10px);
+	border-radius: 16px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .graph-container h3 {
 	margin-top: 0;
-	color: #333;
+	margin-bottom: 1.5rem;
+	color: #2d3748;
+	font-weight: 600;
+	text-align: center;
 }
 
 #graph-viz {
-	border: 1px solid #ddd;
-	border-radius: 4px;
-	background: white;
-	margin: 1rem 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	margin: 1.5rem 0;
+	min-height: 400px;
 }
 
 #graph-viz text {
