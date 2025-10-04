@@ -253,3 +253,49 @@ main {
 	color: #d93025;
 	margin-top: 1rem;
 }
+
+/* Enriched Root Display Styles */
+.root-item {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border-left: 3px solid #2c5aa0;
+  background: rgba(44, 90, 160, 0.05);
+  border-radius: 0 4px 4px 0;
+}
+
+.root-main {
+  margin-bottom: 0.5rem;
+}
+
+.root-meaning {
+  font-style: italic;
+  color: #555;
+}
+
+.root-details {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.root-tag {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.root-tag.category {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.root-tag.frequency {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.root-tag.pos {
+  background: #e8f5e8;
+  color: #2e7d32;
+}

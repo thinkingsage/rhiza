@@ -20,15 +20,27 @@
     showGraphViz = false; // Close graph when searching new word
 
     try {
-      const response = await fetch(`${API_BASE_URL}/word/${wordToSearch.trim()}`);
+      // Fetch both etymology and graph data
+      const [etymologyResponse, graphResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/word/${wordToSearch.trim()}`),
+        fetch(`${API_BASE_URL}/word/${wordToSearch.trim()}/graph`)
+      ]);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.detail || `Server error (${response.status})`;
+      if (!etymologyResponse.ok) {
+        const errorData = await etymologyResponse.json().catch(() => ({}));
+        const errorMsg = errorData.detail || `Server error (${etymologyResponse.status})`;
         throw new Error(errorMsg);
       }
 
-      searchResult = await response.json();
+      const etymologyData = await etymologyResponse.json();
+      
+      // Handle graph data (may fail if endpoint doesn't exist yet)
+      let graphData = null;
+      if (graphResponse.ok) {
+        graphData = await graphResponse.json();
+      }
+
+      searchResult = { ...etymologyData, graphData };
     } catch (error) {
       errorMessage = error.message;
       console.error('Failed to fetch word roots:', error);
@@ -55,6 +67,13 @@
     const container = document.getElementById('graph-viz');
     container.innerHTML = '';
     
+    // Use enriched graph if we have the enhanced data
+    if (data.nodes && data.edges) {
+      createEnrichedGraph(data);
+      return;
+    }
+    
+    // Fallback to simple graph for basic data
     const width = 500;
     const height = 400;
     
@@ -172,6 +191,97 @@
         .attr('y', d => d.y);
     });
   }
+
+  // Enhanced graph visualization function
+  function createEnrichedGraph(data) {
+    const width = 800;
+    const height = 600;
+    
+    const svg = d3.select('#graph-viz')
+      .append('svg')
+      .attr('width', width)
+      .attr('height', height)
+      .style('background', 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)')
+      .style('border-radius', '12px');
+    
+    const defs = svg.append('defs');
+    
+    // Category colors
+    const categoryColors = {
+      'emotion': '#ff6b6b',
+      'abstract_concept': '#4ecdc4', 
+      'academic': '#45b7d1',
+      'nature': '#96ceb4',
+      'psychology': '#dda0dd',
+      'default': '#95a5a6'
+    };
+    
+    const g = svg.append('g');
+    
+    // Enhanced simulation
+    const simulation = d3.forceSimulation(data.nodes)
+      .force('link', d3.forceLink(data.edges).id(d => d.id).distance(120))
+      .force('charge', d3.forceManyBody().strength(-400))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collision', d3.forceCollide().radius(30));
+    
+    // Links
+    const link = g.append('g')
+      .selectAll('line')
+      .data(data.edges)
+      .enter().append('line')
+      .attr('stroke', '#999')
+      .attr('stroke-width', 2);
+    
+    // Nodes with category-based colors
+    const node = g.append('g')
+      .selectAll('circle')
+      .data(data.nodes)
+      .enter().append('circle')
+      .attr('r', d => {
+        let baseRadius = d.type === 'EnglishWord' ? 15 : 12;
+        if (d.properties?.frequency === 'very_high') baseRadius *= 1.4;
+        else if (d.properties?.frequency === 'high') baseRadius *= 1.2;
+        return baseRadius;
+      })
+      .attr('fill', d => {
+        if (d.type === 'GreekRoot' && d.properties?.category) {
+          return categoryColors[d.properties.category] || categoryColors.default;
+        }
+        return d.type === 'EnglishWord' ? '#2c5aa0' : categoryColors.default;
+      })
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 2)
+      .style('cursor', 'pointer');
+    
+    // Labels
+    const label = g.append('g')
+      .selectAll('text')
+      .data(data.nodes)
+      .enter().append('text')
+      .text(d => d.label)
+      .attr('text-anchor', 'middle')
+      .attr('dy', -20)
+      .attr('font-size', '12px')
+      .attr('fill', '#2d3748');
+    
+    // Simulation tick
+    simulation.on('tick', () => {
+      link
+        .attr('x1', d => d.source.x)
+        .attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x)
+        .attr('y2', d => d.target.y);
+      
+      node
+        .attr('cx', d => d.x)
+        .attr('cy', d => d.y);
+      
+      label
+        .attr('x', d => d.x)
+        .attr('y', d => d.y);
+    });
+  }
 </script>
 
 <main>
@@ -196,10 +306,25 @@
         <h2>{searchResult.name}</h2>
         <ul>
           {#each searchResult.roots as root}
-            <li>
-              <strong class="greek-text">{root.name}</strong> 
-              <span class="root-transliteration">({root.transliteration})</span>:
-              <span>{root.meaning}</span>
+            <li class="root-item">
+              <div class="root-main">
+                <strong class="greek-text">{root.name}</strong> 
+                <span class="root-transliteration">({root.transliteration})</span>:
+                <span class="root-meaning">{root.meaning}</span>
+              </div>
+              {#if root.category || root.frequency || root.part_of_speech}
+                <div class="root-details">
+                  {#if root.category}
+                    <span class="root-tag category">{root.category}</span>
+                  {/if}
+                  {#if root.frequency}
+                    <span class="root-tag frequency">{root.frequency} frequency</span>
+                  {/if}
+                  {#if root.part_of_speech}
+                    <span class="root-tag pos">{root.part_of_speech}</span>
+                  {/if}
+                </div>
+              {/if}
             </li>
           {/each}
         </ul>

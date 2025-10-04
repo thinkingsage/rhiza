@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
 import google.generativeai as genai
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
@@ -67,10 +68,42 @@ class GreekRoot(BaseModel):
     name: str = Field(..., description="The root in Ancient Greek script.")
     transliteration: str = Field(..., description="The common English transliteration.")
     meaning: str = Field(..., description="A concise English meaning.")
+    category: Optional[str] = Field(None, description="Semantic category of the root.")
+    frequency: Optional[str] = Field(None, description="Usage frequency in English.")
+    part_of_speech: Optional[str] = Field(None, description="Grammatical category.")
+
+class EnglishWordNode(BaseModel):
+    name: str = Field(..., description="The English word.")
+    definition: Optional[str] = Field(None, description="Word definition.")
+    first_use_year: Optional[int] = Field(None, description="First recorded use year.")
+    field: Optional[str] = Field(None, description="Academic or professional field.")
+    complexity_level: Optional[str] = Field(None, description="Word complexity level.")
+
+class Relationship(BaseModel):
+    type: str = Field(..., description="Relationship type.")
+    strength: Optional[float] = Field(None, description="Relationship strength (0-1).")
+    position: Optional[str] = Field(None, description="Position in word (prefix/suffix).")
+
+class GraphNode(BaseModel):
+    id: str = Field(..., description="Unique node identifier.")
+    label: str = Field(..., description="Node display label.")
+    type: str = Field(..., description="Node type (EnglishWord, GreekRoot, etc.).")
+    properties: Dict[str, Any] = Field(default_factory=dict, description="Node properties.")
+
+class GraphEdge(BaseModel):
+    source: str = Field(..., description="Source node ID.")
+    target: str = Field(..., description="Target node ID.")
+    type: str = Field(..., description="Relationship type.")
+    properties: Dict[str, Any] = Field(default_factory=dict, description="Edge properties.")
+
+class GraphResponse(BaseModel):
+    nodes: List[GraphNode] = Field(..., description="Graph nodes.")
+    edges: List[GraphEdge] = Field(..., description="Graph edges.")
 
 class WordResponse(BaseModel):
     name: str = Field(..., description="The original English word provided.")
     roots: List[GreekRoot] = Field(..., description="An array of root objects.")
+    word_info: Optional[EnglishWordNode] = Field(None, description="Additional word information.")
 
 # --- AI Configuration ---
 
@@ -532,3 +565,57 @@ async def get_words_from_root(root_name: str):
     except Exception as e:
         logger.error("Error in related words request", root=root_name, error=str(e))
         raise HTTPException(status_code=500, detail="Unable to retrieve related words")
+
+@app.get("/word/{english_word}/graph", response_model=GraphResponse)
+async def get_word_graph(english_word: str):
+    """Get enriched graph data for visualization."""
+    if not re.match(r"^[a-zA-Z\s'-]+$", english_word):
+        raise HTTPException(status_code=400, detail="Invalid characters in word")
+    
+    try:
+        # Get word and its roots
+        word_data = await get_word_etymology(english_word)
+        
+        # Build graph nodes and edges
+        nodes = []
+        edges = []
+        
+        # Add English word node
+        word_node = GraphNode(
+            id=f"word_{english_word}",
+            label=english_word,
+            type="EnglishWord",
+            properties={"name": english_word}
+        )
+        nodes.append(word_node)
+        
+        # Add root nodes and edges
+        for root in word_data.roots:
+            root_node = GraphNode(
+                id=f"root_{root.transliteration}",
+                label=f"{root.name}\n({root.transliteration})",
+                type="GreekRoot",
+                properties={
+                    "name": root.name,
+                    "transliteration": root.transliteration,
+                    "meaning": root.meaning,
+                    "category": getattr(root, 'category', None),
+                    "frequency": getattr(root, 'frequency', None)
+                }
+            )
+            nodes.append(root_node)
+            
+            # Add derivation edge
+            edge = GraphEdge(
+                source=f"word_{english_word}",
+                target=f"root_{root.transliteration}",
+                type="DERIVES_FROM",
+                properties={"strength": 0.9}
+            )
+            edges.append(edge)
+        
+        return GraphResponse(nodes=nodes, edges=edges)
+        
+    except Exception as e:
+        logger.error("Error in graph request", word=english_word, error=str(e))
+        raise HTTPException(status_code=500, detail="Unable to generate graph data")
