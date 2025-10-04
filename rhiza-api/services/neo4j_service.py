@@ -1,13 +1,27 @@
 import os
 from neo4j import GraphDatabase
 from typing import List, Dict, Optional
+import structlog
+
+logger = structlog.get_logger(__name__)
 
 class EtymologyGraphService:
     def __init__(self):
         uri = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
         user = os.environ.get("NEO4J_USER", "neo4j")
         password = os.environ.get("NEO4J_PASSWORD", "password")
-        self.driver = GraphDatabase.driver(uri, auth=(user, password))
+        
+        # Configure connection pool settings
+        self.driver = GraphDatabase.driver(
+            uri, 
+            auth=(user, password),
+            max_connection_lifetime=3600,  # 1 hour
+            max_connection_pool_size=50,   # Max connections
+            connection_acquisition_timeout=60  # 60 seconds
+        )
+        
+        logger.info("Neo4j driver initialized with connection pooling", 
+                   uri=uri, max_pool_size=50)
     
     def close(self):
         self.driver.close()
