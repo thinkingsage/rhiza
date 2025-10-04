@@ -91,11 +91,13 @@ Try searching for these words to see Rhiza in action:
 
 ```mermaid
 graph TB
-    UI[🌟 Rhiza UI<br/>SvelteKit + D3.js] --> API[🏛️ Rhiza API<br/>FastAPI + Python]
+    Proxy[🌐 Nginx Proxy<br/>Load Balancer] --> UI[🌟 Rhiza UI<br/>SvelteKit + D3.js]
+    Proxy --> API[🏛️ Rhiza API<br/>FastAPI + Python]
     API --> Neo4j[(📊 Neo4j<br/>Graph Database)]
     API --> Bedrock[🤖 AWS Bedrock<br/>Claude Sonnet 4]
     API --> Gemini[🔮 Google Gemini<br/>Fallback AI]
     
+    style Proxy fill:#ff6b6b
     style UI fill:#667eea
     style API fill:#f093fb
     style Neo4j fill:#16a085
@@ -105,6 +107,7 @@ graph TB
 
 ### Components
 
+- **[proxy](./proxy/)** - Nginx reverse proxy for load balancing and routing
 - **[rhiza-ui](./rhiza-ui/)** - Modern SvelteKit frontend with interactive visualizations
 - **[rhiza-api](./rhiza-api/)** - FastAPI backend with AI integration and graph database
 - **Neo4j** - Graph database for storing etymological relationships
