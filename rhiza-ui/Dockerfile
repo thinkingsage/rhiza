@@ -1,32 +1,26 @@
-# --- Stage 1: Build the Svelte application ---
 FROM node:20-alpine AS builder
 
-# Set the working directory
 WORKDIR /app
 
-# Install pnpm
+# Install pnpm in separate layer
 RUN npm install -g pnpm
 
-# Copy package files and install dependencies
+# Copy only dependency files first for better caching
 COPY package*.json pnpm-lock.yaml ./
+
+# Install dependencies in separate layer for caching
 RUN pnpm install
 
-# Copy the rest of the application source code
+# Copy source code last to maximize cache hits
 COPY . .
 
-# Run the build command to create a production-ready build
+# Build application
 RUN pnpm run build
 
-# --- Stage 2: Serve the application using Nginx ---
 FROM nginx:stable-alpine
 
-# Copy the built static files from the 'builder' stage
+# Copy built files and config
 COPY --from=builder /app/build /usr/share/nginx/html
-
-# Copy the custom Nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port 80
 EXPOSE 80
-
-# The default Nginx command will start the server
