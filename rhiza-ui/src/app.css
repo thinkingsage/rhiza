@@ -15,6 +15,9 @@ body {
 	line-height: 1.6;
 	margin: 0;
 	padding: 0;
+	background-image: 
+		radial-gradient(circle at 25% 25%, rgba(44, 90, 160, 0.02) 0%, transparent 50%),
+		radial-gradient(circle at 75% 75%, rgba(22, 160, 133, 0.02) 0%, transparent 50%);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -63,6 +66,68 @@ h1, h2, h3, h4, h5, h6 {
 	box-shadow: none;
 }
 
+.graph-btn {
+	background: linear-gradient(135deg, #16a085 0%, #27ae60 100%);
+	border: none;
+	color: white;
+	font-family: var(--font-sans);
+	font-weight: 500;
+	padding: 0.75rem 1.5rem;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	margin-top: 1rem;
+	box-shadow: 0 2px 4px rgba(22, 160, 133, 0.2);
+	float: right;
+}
+
+.graph-btn:hover {
+	background: linear-gradient(135deg, #138d75 0%, #229954 100%);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(22, 160, 133, 0.3);
+}
+
+.graph-btn:active {
+	transform: translateY(0);
+	box-shadow: 0 2px 4px rgba(22, 160, 133, 0.2);
+}
+
+.graph-container {
+	margin-top: 2rem;
+	padding: 1.5rem;
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	background: #fafafa;
+}
+
+.graph-container h3 {
+	margin-top: 0;
+	color: #333;
+}
+
+#graph-viz {
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	background: white;
+	margin: 1rem 0;
+}
+
+#graph-viz text {
+	pointer-events: none;
+	user-select: none;
+}
+
+#graph-viz .root-text {
+	font-family: var(--font-serif);
+	font-style: italic;
+	font-weight: 500;
+}
+
+#graph-viz .word-text {
+	font-family: var(--font-sans);
+	font-weight: 600;
+}
+
 .greek-text {
 	font-family: var(--font-serif);
 	font-style: italic;
@@ -72,4 +137,12 @@ h1, h2, h3, h4, h5, h6 {
 	font-family: var(--font-sans);
 	font-style: italic;
 	opacity: 0.8;
+}
+
+.root-transliteration {
+	font-family: var(--font-sans);
+	font-style: normal;
+	font-weight: 400;
+	opacity: 0.7;
+	font-size: 0.9em;
 }
