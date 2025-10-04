@@ -92,13 +92,16 @@ async def add_request_id(request: Request, call_next):
     response.headers["X-Request-ID"] = request_id
     return response
 
+# CORS configuration
+ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000").split(",")
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify exact origins
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Initialize Neo4j service
@@ -200,19 +203,65 @@ Now, analyze the following word:
 # --- Helper Functions ---
 
 def is_valid_english_word(word: str) -> bool:
-    """Basic validation for English words."""
-    if not word or len(word) < 2 or len(word) > 45:
+    """Enhanced validation for English words with security checks."""
+    if not word or not isinstance(word, str):
         return False
     
-    # Only allow letters, hyphens, and apostrophes
-    if not re.match(r"^[a-zA-Z'-]+$", word):
+    # Strip whitespace and convert to lowercase for validation
+    word = word.strip().lower()
+    
+    # Length constraints
+    if len(word) < 1 or len(word) > 50:
         return False
+    
+    # Only allow letters, hyphens, apostrophes, and spaces
+    if not re.match(r"^[a-zA-Z\s'-]+$", word):
+        return False
+    
+    # Prevent SQL injection patterns
+    sql_patterns = [
+        r"(union|select|insert|update|delete|drop|create|alter|exec|execute)",
+        r"(script|javascript|vbscript|onload|onerror)",
+        r"(<|>|&lt;|&gt;|%3c|%3e)",
+        r"(--|#|/\*|\*/)"
+    ]
+    
+    for pattern in sql_patterns:
+        if re.search(pattern, word, re.IGNORECASE):
+            return False
     
     # Reject obvious non-English patterns
-    if re.search(r'[qxz]{2,}|[bcdfghjklmnpqrstvwxyz]{5,}', word.lower()):
+    if re.search(r'[qxz]{3,}|[bcdfghjklmnpqrstvwxyz]{6,}', word):
+        return False
+    
+    # Reject repeated characters (potential DoS)
+    if re.search(r'(.)\1{10,}', word):
+        return False
+    
+    # Reject common attack strings
+    attack_strings = ['null', 'undefined', 'eval', 'function', 'constructor']
+    if word.lower() in attack_strings:
         return False
     
     return True
+
+def sanitize_input(text: str) -> str:
+    """Sanitize input text to prevent XSS and injection attacks."""
+    if not text or not isinstance(text, str):
+        return ""
+    
+    # Remove null bytes and control characters
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    
+    # HTML entity encoding for dangerous characters
+    text = text.replace('&', '&amp;')
+    text = text.replace('<', '&lt;')
+    text = text.replace('>', '&gt;')
+    text = text.replace('"', '&quot;')
+    text = text.replace("'", '&#x27;')
+    
+    # Limit length to prevent DoS
+    return text[:100].strip()
 
 # --- AI Helper Functions ---
 
@@ -315,54 +364,60 @@ async def get_word_roots(request: Request, english_word: str, response: Response
     """
     response.headers["Content-Type"] = "application/json; charset=utf-8"
     
+    # Sanitize input first
+    english_word = sanitize_input(english_word)
+    
     logger.info("Etymology request started", word=english_word)
     
-    # Validate input as English word
+    # Enhanced input validation
     if not is_valid_english_word(english_word):
-        logger.warning("Invalid word format", word=english_word)
+        logger.warning("Invalid word format", word=english_word, ip=get_remote_address(request))
         if not english_word.strip():
             raise HTTPException(status_code=400, detail="Please enter a word to search")
-        elif len(english_word) < 2:
-            raise HTTPException(status_code=400, detail="Word must be at least 2 characters long")
-        elif len(english_word) > 45:
-            raise HTTPException(status_code=400, detail="Word is too long (maximum 45 characters)")
-        elif not re.match(r"^[a-zA-Z'-]+$", english_word):
-            raise HTTPException(status_code=400, detail="Please use only letters, hyphens, and apostrophes")
+        elif len(english_word) < 1:
+            raise HTTPException(status_code=400, detail="Word cannot be empty")
+        elif len(english_word) > 50:
+            raise HTTPException(status_code=400, detail="Word is too long (maximum 50 characters)")
+        elif not re.match(r"^[a-zA-Z\s'-]+$", english_word):
+            raise HTTPException(status_code=400, detail="Please use only letters, spaces, hyphens, and apostrophes")
         else:
-            raise HTTPException(status_code=400, detail="Please enter a valid English word")
+            raise HTTPException(status_code=400, detail="Invalid input detected. Please enter a valid English word")
+    
+    # Normalize word for processing
+    normalized_word = english_word.strip().lower()
     
     try:
         # First, check if we have this word in our graph
-        cached_result = await graph_service.find_word_roots(english_word)
+        cached_result = await graph_service.find_word_roots(normalized_word)
         if cached_result:
-            logger.info("Found cached result", word=english_word, source="graph_db")
+            logger.info("Found cached result", word=normalized_word, source="graph_db")
             # Cache for 1 hour since data is stable
             response.headers["Cache-Control"] = "public, max-age=3600"
             response.headers["ETag"] = f'"{hash(str(cached_result))}"'
             return cached_result
         
         # If not in graph, use AI to analyze the word
-        logger.info("No cached result, using AI", word=english_word)
-        result = await get_ai_etymology(english_word)
+        logger.info("No cached result, using AI", word=normalized_word)
+        result = await get_ai_etymology(normalized_word)
         
         # Store the result in graph for future queries (even if no roots found)
-        await graph_service.store_etymology(english_word, result["roots"])
+        await graph_service.store_etymology(normalized_word, result["roots"])
         if result.get("roots"):
-            logger.info("Stored etymology in graph", word=english_word, roots_count=len(result["roots"]))
+            logger.info("Stored etymology in graph", word=normalized_word, roots_count=len(result["roots"]))
         else:
-            logger.info("Stored word with no roots in graph", word=english_word)
+            logger.info("Stored word with no roots in graph", word=normalized_word)
         
         # Cache new results for 1 hour
         response.headers["Cache-Control"] = "public, max-age=3600"
         response.headers["ETag"] = f'"{hash(str(result))}"'
         
-        logger.info("Etymology request completed", word=english_word, roots_found=len(result.get("roots", [])))
+        logger.info("Etymology request completed", word=normalized_word, roots_found=len(result.get("roots", [])))
         return result
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Unexpected error in etymology request", word=english_word, error=str(e), error_type=type(e).__name__)
+        logger.error("Unexpected error in etymology request", word=normalized_word, error=str(e), error_type=type(e).__name__)
         if "DNS resolve" in str(e) or "connection" in str(e).lower():
             raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again later.")
         elif "timeout" in str(e).lower():
@@ -405,11 +460,22 @@ async def get_words_from_root(root_name: str):
     """
     Find all words that derive from a specific Greek root.
     """
+    # Sanitize and validate input
+    root_name = sanitize_input(root_name)
+    
+    if not root_name or len(root_name) > 100:
+        raise HTTPException(status_code=400, detail="Invalid root name")
+    
+    # Allow Greek characters, Latin characters, and common transliteration symbols
+    if not re.match(r"^[\u0370-\u03FF\u1F00-\u1FFFa-zA-Z\s'-]+$", root_name):
+        raise HTTPException(status_code=400, detail="Invalid characters in root name")
+    
     try:
-        words = await graph_service.get_related_words(root_name)
+        words = await graph_service.get_related_words(root_name.strip())
         return {"root": root_name, "words": words}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error in related words request", root=root_name, error=str(e))
+        raise HTTPException(status_code=500, detail="Unable to retrieve related words")
 
 @app.get("/word/{english_word}/graph")
 @limiter.limit("60/minute")  # 60 requests per minute per IP (lighter endpoint)
@@ -417,6 +483,15 @@ async def get_word_graph(request: Request, english_word: str, response: Response
     """
     Get graph visualization data for a word and its roots.
     """
+    # Sanitize and validate input
+    english_word = sanitize_input(english_word)
+    
+    if not is_valid_english_word(english_word):
+        logger.warning("Invalid word format in graph request", word=english_word, ip=get_remote_address(request))
+        raise HTTPException(status_code=400, detail="Invalid input detected. Please enter a valid English word")
+    
+    normalized_word = english_word.strip().lower()
+    
     try:
         async with graph_service.driver.session() as session:
             result = await session.run("""
@@ -426,7 +501,7 @@ async def get_word_graph(request: Request, english_word: str, response: Response
                            collect(DISTINCT {id: r.transliteration, label: r.name + ' (' + r.meaning + ')', type: 'root'}),
                     links: collect({source: w.name, target: r.transliteration, type: 'derives_from'})
                 } as graph
-            """, word=english_word.lower())
+            """, word=normalized_word)
             
             record = await result.single()
             if record and record["graph"]["nodes"]:
@@ -441,4 +516,5 @@ async def get_word_graph(request: Request, english_word: str, response: Response
                 response.headers["Cache-Control"] = "public, max-age=900"
                 return empty_result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error in graph request", word=normalized_word, error=str(e))
+        raise HTTPException(status_code=500, detail="Unable to generate graph data")
