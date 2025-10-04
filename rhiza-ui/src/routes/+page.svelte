@@ -4,7 +4,6 @@
   import GraphVisualization from '$lib/components/GraphVisualization.svelte';
   import { searchWord, fetchGraphData, toggleSetItem, clearSet } from '$lib/utils.js';
   
-  // State
   let wordToSearch = '';
   let isLoading = false;
   let searchResult = null;
@@ -14,10 +13,10 @@
   let selectedCategories = new Set();
   let selectedFrequencies = new Set();
   let educationalMode = null;
+  let showRelatedWords = false;
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const API_BASE_URL = '/api';
 
-  // Search functionality
   async function searchForRoot() {
     if (!wordToSearch.trim()) return;
 
@@ -33,7 +32,6 @@
         const data = await fetchGraphData(searchResult.name, API_BASE_URL);
         if (data.nodes.length > 0) {
           graphData = data;
-          showGraphViz = true;
         }
       }
     } catch (error) {
@@ -46,7 +44,10 @@
 
   async function showGraph(word) {
     try {
-      const data = await fetchGraphData(word, API_BASE_URL);
+      const url = `${API_BASE_URL}/word/${word}/graph${showRelatedWords ? '?include_related=true' : ''}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
       if (data.nodes.length > 0) {
         graphData = data;
         showGraphViz = true;
@@ -56,28 +57,10 @@
     }
   }
 
-  // Event handlers
   function handleKeyPress(event) {
     if (event.key === 'Enter') {
       searchForRoot();
     }
-  }
-
-  function toggleCategoryFilter(category) {
-    selectedCategories = toggleSetItem(selectedCategories, category);
-  }
-
-  function toggleFrequencyFilter(frequency) {
-    selectedFrequencies = toggleSetItem(selectedFrequencies, frequency);
-  }
-
-  function clearFilters() {
-    selectedCategories = clearSet(selectedCategories);
-    selectedFrequencies = clearSet(selectedFrequencies);
-  }
-
-  function toggleEducationalMode(mode) {
-    educationalMode = educationalMode === mode ? null : mode;
   }
 
   function closeGraph() {
@@ -99,6 +82,12 @@
         class="search-input"
         disabled={isLoading}
       />
+      <div class="search-options">
+        <label class="checkbox-label">
+          <input type="checkbox" bind:checked={showRelatedWords} />
+          Show related words
+        </label>
+      </div>
       <button on:click={searchForRoot} class="search-btn" disabled={isLoading || !wordToSearch.trim()}>
         {#if isLoading}
           Searching...
@@ -117,14 +106,7 @@
     {#if showGraphViz && graphData}
       <GraphVisualization 
         {graphData}
-        {educationalMode}
-        {selectedCategories}
-        {selectedFrequencies}
         onClose={closeGraph}
-        onCategoryToggle={toggleCategoryFilter}
-        onFrequencyToggle={toggleFrequencyFilter}
-        onEducationalModeToggle={toggleEducationalMode}
-        onClearFilters={clearFilters}
       />
     {/if}
 

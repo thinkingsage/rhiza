@@ -1,121 +1,103 @@
 <script>
-  import { slide } from 'svelte/transition';
   import { onMount } from 'svelte';
-  import { renderGraph, applyEducationalMode } from '../graphRenderer.js';
-  import GraphControls from './GraphControls.svelte';
+  import * as d3 from 'd3';
   
   export let graphData;
-  export let educationalMode;
-  export let selectedCategories;
-  export let selectedFrequencies;
   export let onClose;
-  export let onCategoryToggle;
-  export let onFrequencyToggle;
-  export let onEducationalModeToggle;
-  export let onClearFilters;
   
-  let filteredGraphData = null;
-  
-  $: if (graphData) {
-    filteredGraphData = graphData;
-    applyFilters();
-  }
+  let container;
   
   onMount(() => {
-    if (graphData) {
-      setTimeout(() => {
-        renderGraph(graphData);
-        applyEducationalMode(educationalMode);
-      }, 100);
+    if (graphData && container) {
+      renderGraph();
     }
   });
   
-  function applyFilters() {
-    if (!filteredGraphData) return;
+  function renderGraph() {
+    const containerWidth = container.clientWidth || 600;
+    const width = Math.min(containerWidth - 20, 600);
+    const height = 400;
     
-    const hasFilters = selectedCategories.size > 0 || selectedFrequencies.size > 0;
+    const svg = d3.select(container)
+      .append('svg')
+      .attr('width', width)
+      .attr('height', height)
+      .style('border', '1px solid #ddd')
+      .style('border-radius', '8px')
+      .style('max-width', '100%');
     
-    if (!hasFilters) {
-      renderGraph(filteredGraphData);
-      applyEducationalMode(educationalMode);
-      return;
-    }
-
-    const filteredNodes = filteredGraphData.nodes.filter(node => {
-      if (node.type === 'word') return true;
+    const g = svg.append('g');
+    
+    // Add zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([0.5, 3])
+      .on('zoom', (event) => {
+        g.attr('transform', event.transform);
+      });
+    
+    svg.call(zoom);
+    
+    // Create force simulation
+    const simulation = d3.forceSimulation(graphData.nodes)
+      .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(100))
+      .force('charge', d3.forceManyBody().strength(-300))
+      .force('center', d3.forceCenter(width / 2, height / 2));
+    
+    // Draw links
+    const link = g.selectAll('line')
+      .data(graphData.links)
+      .enter()
+      .append('line')
+      .attr('stroke', '#999')
+      .attr('stroke-width', 2);
+    
+    // Draw nodes
+    const node = g.selectAll('circle')
+      .data(graphData.nodes)
+      .enter()
+      .append('circle')
+      .attr('r', d => d.type === 'word' ? 15 : 10)
+      .attr('fill', d => d.type === 'word' ? '#2c5aa0' : '#ff6b6b')
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 2)
+      .style('cursor', 'pointer');
+    
+    // Add labels
+    const label = g.selectAll('text')
+      .data(graphData.nodes)
+      .enter()
+      .append('text')
+      .attr('dy', '.35em')
+      .attr('text-anchor', 'middle')
+      .attr('font-size', '12px')
+      .attr('fill', '#333')
+      .text(d => d.label)
+      .style('pointer-events', 'none');
+    
+    // Update positions on simulation tick
+    simulation.on('tick', () => {
+      link
+        .attr('x1', d => d.source.x)
+        .attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x)
+        .attr('y2', d => d.target.y);
       
-      const props = node.properties || {};
-      const categoryMatch = selectedCategories.size === 0 || selectedCategories.has(props.category);
-      const frequencyMatch = selectedFrequencies.size === 0 || selectedFrequencies.has(props.frequency);
+      node
+        .attr('cx', d => d.x)
+        .attr('cy', d => d.y);
       
-      return categoryMatch && frequencyMatch;
+      label
+        .attr('x', d => d.x)
+        .attr('y', d => d.y);
     });
-
-    const nodeIds = new Set(filteredNodes.map(n => n.id));
-    const filteredLinks = filteredGraphData.links.filter(link => 
-      nodeIds.has(link.source) && nodeIds.has(link.target)
-    );
-
-    renderGraph({ nodes: filteredNodes, links: filteredLinks });
-    applyEducationalMode(educationalMode);
-  }
-  
-  $: if (educationalMode !== undefined) {
-    applyEducationalMode(educationalMode);
   }
 </script>
 
-<div class="graph-container" transition:slide={{ duration: 500 }}>
-  <h3>Etymology Graph</h3>
-  
-  <div id="graph-viz"></div>
-  
-  <GraphControls 
-    {selectedCategories}
-    {selectedFrequencies}
-    {educationalMode}
-    {onCategoryToggle}
-    {onFrequencyToggle}
-    {onEducationalModeToggle}
-    {onClearFilters}
-  />
-  
-  <div class="legend">
-    <h4>Legend</h4>
-    <div class="legend-sections">
-      <div class="legend-section">
-        <h5>Node Colors (Categories)</h5>
-        <div class="legend-items">
-          <div class="legend-item"><div class="legend-color" style="background: #ff6b6b;"></div> Emotion</div>
-          <div class="legend-item"><div class="legend-color" style="background: #4ecdc4;"></div> Abstract Concept</div>
-          <div class="legend-item"><div class="legend-color" style="background: #9b59b6;"></div> Political</div>
-          <div class="legend-item"><div class="legend-color" style="background: #3498db;"></div> Academic</div>
-          <div class="legend-item"><div class="legend-color" style="background: #2ecc71;"></div> Nature</div>
-        </div>
-      </div>
-      
-      <div class="legend-section">
-        <h5>Node Sizes (Frequency)</h5>
-        <div class="legend-items">
-          <div class="legend-item"><div class="legend-size very-high"></div> Very High</div>
-          <div class="legend-item"><div class="legend-size high"></div> High</div>
-          <div class="legend-item"><div class="legend-size medium"></div> Medium</div>
-          <div class="legend-item"><div class="legend-size low"></div> Low</div>
-        </div>
-      </div>
-      
-      <div class="legend-section">
-        <h5>Border Styles (Part of Speech)</h5>
-        <div class="legend-items">
-          <div class="legend-item"><div class="legend-border" style="border: 4px solid #333;"></div> Verb</div>
-          <div class="legend-item"><div class="legend-border" style="border: 3px solid #333;"></div> Noun</div>
-          <div class="legend-item"><div class="legend-border" style="border: 2px dashed #333;"></div> Adverb</div>
-        </div>
-      </div>
-    </div>
+<div style="margin-top: 2rem; padding: 1.5rem; background: rgba(255,255,255,0.95); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); max-width: 100%; overflow: hidden;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h3 style="margin: 0;">Etymology Graph</h3>
+    <button on:click={onClose} class="search-btn" style="padding: 0.5rem; min-width: auto;">×</button>
   </div>
   
-  <button class="graph-btn" on:click={onClose}>Close Graph</button>
+  <div bind:this={container} style="width: 100%; max-width: 100%; overflow: hidden;"></div>
 </div>
-
-

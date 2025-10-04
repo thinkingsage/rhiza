@@ -458,7 +458,8 @@ h1 {
 	}
 
 	.card {
-		padding: 2rem;
+		padding: 2.5rem 2rem;
+		margin: 1rem;
 	}
 
 	h1 {
@@ -881,4 +882,21 @@ main {
   background: #28a745;
   color: white;
   box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+}
+/* Search Options */
+.search-options {
+  margin: 8px 0;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #495057;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin: 0;
 }
