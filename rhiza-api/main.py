@@ -318,6 +318,36 @@ async def get_word_roots(request: Request, english_word: str, response: Response
         else:
             raise HTTPException(status_code=500, detail="An unexpected error occurred. Please try again.")
 
+@app.get("/health")
+async def health_check():
+    """Basic health check endpoint"""
+    return {"status": "healthy"}
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness check - verifies dependencies are available"""
+    try:
+        # Test Neo4j connection
+        with graph_service.driver.session() as session:
+            session.run("RETURN 1").single()
+        
+        # Test AI providers (non-blocking)
+        ai_status = {
+            "bedrock": bedrock_client is not None,
+            "gemini": GEMINI_API_KEY is not None
+        }
+        
+        return {
+            "status": "ready",
+            "dependencies": {
+                "neo4j": "healthy",
+                "ai_providers": ai_status
+            }
+        }
+    except Exception as e:
+        logger.error("Readiness check failed", error=str(e))
+        raise HTTPException(status_code=503, detail="Service not ready")
+
 @app.get("/root/{root_name}/words")
 async def get_words_from_root(root_name: str):
     """
