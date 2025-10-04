@@ -8,15 +8,19 @@
   let errorMessage = null;
   let showGraphViz = false;
 
+  // API base URL - use environment variable or default to localhost
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
   async function searchForRoot() {
     if (!wordToSearch.trim()) return;
 
     isLoading = true;
     searchResult = null;
     errorMessage = null;
+    showGraphViz = false; // Close graph when searching new word
 
     try {
-      const response = await fetch(`http://localhost:8000/word/${wordToSearch.trim()}`);
+      const response = await fetch(`${API_BASE_URL}/word/${wordToSearch.trim()}`);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -35,7 +39,7 @@
 
   async function showGraph(word) {
     try {
-      const response = await fetch(`http://localhost:8000/word/${word}/graph`);
+      const response = await fetch(`${API_BASE_URL}/word/${word}/graph`);
       const graphData = await response.json();
       
       if (graphData.nodes.length > 0) {
@@ -51,42 +55,106 @@
     const container = document.getElementById('graph-viz');
     container.innerHTML = '';
     
-    const width = 400;
-    const height = 300;
+    const width = 500;
+    const height = 400;
     
     const svg = d3.select('#graph-viz')
       .append('svg')
       .attr('width', width)
-      .attr('height', height);
+      .attr('height', height)
+      .style('background', 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)')
+      .style('border-radius', '12px')
+      .style('box-shadow', '0 8px 32px rgba(0, 0, 0, 0.1)');
+    
+    // Add zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([0.5, 3])
+      .on('zoom', (event) => {
+        g.attr('transform', event.transform);
+      });
+    
+    svg.call(zoom);
+    
+    // Create main group for all graph elements
+    const g = svg.append('g');
+    
+    // Add gradient definitions
+    const defs = svg.append('defs');
+    
+    const wordGradient = defs.append('linearGradient')
+      .attr('id', 'wordGradient')
+      .attr('x1', '0%').attr('y1', '0%')
+      .attr('x2', '100%').attr('y2', '100%');
+    wordGradient.append('stop').attr('offset', '0%').attr('stop-color', '#667eea');
+    wordGradient.append('stop').attr('offset', '100%').attr('stop-color', '#764ba2');
+    
+    const rootGradient = defs.append('linearGradient')
+      .attr('id', 'rootGradient')
+      .attr('x1', '0%').attr('y1', '0%')
+      .attr('x2', '100%').attr('y2', '100%');
+    rootGradient.append('stop').attr('offset', '0%').attr('stop-color', '#f093fb');
+    rootGradient.append('stop').attr('offset', '100%').attr('stop-color', '#f5576c');
+    
+    // Add glow filter
+    const filter = defs.append('filter').attr('id', 'glow');
+    filter.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'coloredBlur');
+    const feMerge = filter.append('feMerge');
+    feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+    feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
     
     const simulation = d3.forceSimulation(data.nodes)
-      .force('link', d3.forceLink(data.links).id(d => d.id).distance(80))
-      .force('charge', d3.forceManyBody().strength(-200))
-      .force('center', d3.forceCenter(width / 2, height / 2));
+      .force('link', d3.forceLink(data.links).id(d => d.id).distance(120))
+      .force('charge', d3.forceManyBody().strength(-300))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collision', d3.forceCollide().radius(30));
     
-    const link = svg.append('g')
+    const link = g.append('g')
       .selectAll('line')
       .data(data.links)
       .enter().append('line')
-      .attr('stroke', '#999')
-      .attr('stroke-width', 2);
+      .attr('stroke', '#8e9aaf')
+      .attr('stroke-width', 3)
+      .attr('stroke-opacity', 0.6)
+      .style('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))');
     
-    const node = svg.append('g')
+    const node = g.append('g')
       .selectAll('circle')
       .data(data.nodes)
       .enter().append('circle')
-      .attr('r', d => d.type === 'word' ? 8 : 6)
-      .attr('fill', d => d.type === 'word' ? '#2c5aa0' : '#e74c3c');
+      .attr('r', d => d.type === 'word' ? 12 : 10)
+      .attr('fill', d => d.type === 'word' ? 'url(#wordGradient)' : 'url(#rootGradient)')
+      .attr('stroke', '#ffffff')
+      .attr('stroke-width', 2)
+      .style('filter', 'url(#glow)')
+      .style('cursor', 'pointer')
+      .on('mouseover', function(event, d) {
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr('r', d => d.type === 'word' ? 16 : 14)
+          .attr('stroke-width', 3);
+      })
+      .on('mouseout', function(event, d) {
+        d3.select(this)
+          .transition()
+          .duration(200)
+          .attr('r', d => d.type === 'word' ? 12 : 10)
+          .attr('stroke-width', 2);
+      });
     
-    const label = svg.append('g')
+    const label = g.append('g')
       .selectAll('text')
       .data(data.nodes)
       .enter().append('text')
       .text(d => d.label)
-      .attr('font-size', '12px')
+      .attr('font-size', '13px')
+      .attr('font-weight', '600')
       .attr('class', d => d.type === 'root' ? 'root-text' : 'word-text')
       .attr('text-anchor', 'middle')
-      .attr('dy', -10);
+      .attr('dy', -18)
+      .attr('fill', '#2d3748')
+      .style('text-shadow', '0 1px 2px rgba(255,255,255,0.8)')
+      .style('pointer-events', 'none');
     
     simulation.on('tick', () => {
       link

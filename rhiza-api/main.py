@@ -95,6 +95,10 @@ async def add_request_id(request: Request, call_next):
 # CORS configuration
 ALLOWED_ORIGINS = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000").split(",")
 
+# Handle wildcard for development
+if ALLOWED_ORIGINS == ["*"]:
+    ALLOWED_ORIGINS = ["*"]
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
