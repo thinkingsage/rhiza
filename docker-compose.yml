@@ -32,7 +32,7 @@ services:
   rhiza-ui:
     build: ./rhiza-ui
     ports:
-      - "5173:8080"
+      - "8081:8080"
     depends_on:
       - rhiza-api
     security_opt:

@@ -520,48 +520,6 @@ async def get_word_roots(request: Request, english_word: str, response: Response
         else:
             raise HTTPException(status_code=500, detail="An unexpected error occurred. Please try again.")
 
-@app.get("/word/{english_word}/graph")
-@limiter.limit("60/minute")  # 60 requests per minute per IP (lighter endpoint)
-async def get_word_graph(request: Request, english_word: str, response: Response):
-    """
-    Get graph visualization data for a word and its roots.
-    """
-    # Sanitize and validate input
-    english_word = sanitize_input(english_word)
-    
-    if not is_valid_english_word(english_word):
-        logger.warning("Invalid word format in graph request", word=english_word, ip=get_remote_address(request))
-        raise HTTPException(status_code=400, detail="Invalid input detected. Please enter a valid English word")
-    
-    normalized_word = english_word.strip().lower()
-    
-    try:
-        async with graph_service.driver.session() as session:
-            result = await session.run("""
-                MATCH (w:EnglishWord {name: $word})-[:DERIVES_FROM]->(r:GreekRoot)
-                RETURN {
-                    nodes: collect(DISTINCT {id: w.name, label: w.name, type: 'word'}) + 
-                           collect(DISTINCT {id: r.transliteration, label: r.name + ' (' + r.meaning + ')', type: 'root'}),
-                    links: collect({source: w.name, target: r.transliteration, type: 'derives_from'})
-                } as graph
-            """, word=normalized_word)
-            
-            record = await result.single()
-            if record and record["graph"]["nodes"]:
-                graph_data = record["graph"]
-                # Cache graph data for 1 hour
-                response.headers["Cache-Control"] = "public, max-age=3600"
-                response.headers["ETag"] = f'"{hash(str(graph_data))}"'
-                return graph_data
-            else:
-                empty_result = {"nodes": [], "links": []}
-                # Cache empty results for shorter time (15 minutes)
-                response.headers["Cache-Control"] = "public, max-age=900"
-                return empty_result
-    except Exception as e:
-        logger.error("Error in graph request", word=normalized_word, error=str(e))
-        raise HTTPException(status_code=500, detail="Unable to generate graph data")
-
 @app.get("/root/{root_name}/words")
 async def get_words_from_root(root_name: str):
     """
@@ -584,15 +542,38 @@ async def get_words_from_root(root_name: str):
         logger.error("Error in related words request", root=root_name, error=str(e))
         raise HTTPException(status_code=500, detail="Unable to retrieve related words")
 
-@app.get("/word/{english_word}/graph", response_model=GraphResponse)
-async def get_word_graph(english_word: str):
+@app.get("/word/{english_word}/graph")
+async def get_word_graph(english_word: str, include_related: bool = False):
     """Get enriched graph data for visualization."""
     if not re.match(r"^[a-zA-Z\s'-]+$", english_word):
         raise HTTPException(status_code=400, detail="Invalid characters in word")
     
     try:
-        # Get word and its roots
-        word_data = await get_word_etymology(english_word)
+        # Use the existing etymology endpoint logic
+        normalized_word = english_word.strip().lower()
+        
+        # First, check if we have this word in our graph
+        cached_result = await graph_service.find_word_roots(normalized_word)
+        if cached_result:
+            # Convert cached result to WordResponse format
+            word_data = WordResponse(
+                name=cached_result["name"],
+                roots=[GreekRoot(**root) for root in cached_result["roots"]],
+                word_info=None
+            )
+        else:
+            # If not in graph, use AI to analyze the word
+            logger.info("No cached result, using AI", word=normalized_word)
+            ai_result = await get_ai_etymology(normalized_word)
+            
+            # Store the result in graph for future queries
+            await graph_service.store_etymology(normalized_word, ai_result["roots"])
+            
+            word_data = WordResponse(
+                name=ai_result["name"],
+                roots=[GreekRoot(**root) for root in ai_result["roots"]],
+                word_info=None
+            )
         
         # Build graph nodes and edges
         nodes = []
@@ -602,7 +583,7 @@ async def get_word_graph(english_word: str):
         word_node = GraphNode(
             id=f"word_{english_word}",
             label=english_word,
-            type="EnglishWord",
+            type="word",
             properties={"name": english_word}
         )
         nodes.append(word_node)
@@ -612,13 +593,14 @@ async def get_word_graph(english_word: str):
             root_node = GraphNode(
                 id=f"root_{root.transliteration}",
                 label=f"{root.name}\n({root.transliteration})",
-                type="GreekRoot",
+                type="root",
                 properties={
                     "name": root.name,
                     "transliteration": root.transliteration,
                     "meaning": root.meaning,
                     "category": getattr(root, 'category', None),
-                    "frequency": getattr(root, 'frequency', None)
+                    "frequency": getattr(root, 'frequency', None),
+                    "part_of_speech": getattr(root, 'part_of_speech', None)
                 }
             )
             nodes.append(root_node)
@@ -631,8 +613,32 @@ async def get_word_graph(english_word: str):
                 properties={"strength": 0.9}
             )
             edges.append(edge)
+            
+            # Add related words if requested
+            if include_related:
+                try:
+                    related_words = await graph_service.get_related_words(root.transliteration)
+                    for related_word in related_words[:3]:  # Limit to 3 per root
+                        if related_word.lower() != english_word.lower():
+                            related_node = GraphNode(
+                                id=f"word_{related_word}",
+                                label=related_word,
+                                type="related",
+                                properties={"name": related_word}
+                            )
+                            nodes.append(related_node)
+                            
+                            related_edge = GraphEdge(
+                                source=f"root_{root.transliteration}",
+                                target=f"word_{related_word}",
+                                type="DERIVES_FROM",
+                                properties={"strength": 0.7}
+                            )
+                            edges.append(related_edge)
+                except Exception as e:
+                    logger.warning(f"Could not fetch related words for {root.transliteration}: {e}")
         
-        return GraphResponse(nodes=nodes, edges=edges)
+        return {"nodes": [node.dict() for node in nodes], "links": [edge.dict() for edge in edges]}
         
     except Exception as e:
         logger.error("Error in graph request", word=english_word, error=str(e))

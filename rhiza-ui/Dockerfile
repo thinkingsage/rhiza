@@ -11,6 +11,9 @@ COPY package*.json pnpm-lock.yaml ./
 # Install dependencies in separate layer for caching
 RUN pnpm install
 
+# Add cache-busting argument
+ARG CACHEBUST=1
+
 # Copy source code last to maximize cache hits
 COPY . .
 
