@@ -69,7 +69,7 @@ except Exception as e:
 
 app = FastAPI(
     title="Project Logos API",
-    description="API for exploring the Greek roots of English words.",
+    description="API for exploring the Greek roots of English words with build caching.",
     version="1.0.0",
 )
 
@@ -104,9 +104,61 @@ app.add_middleware(
 # Initialize Neo4j service
 graph_service = EtymologyGraphService()
 
+@app.on_event("startup")
+async def startup_event():
+    # ASCII art Rho logo
+    rho_logo = """
+    ██████╗ ██╗  ██╗██╗███████╗ █████╗ 
+    ██╔══██╗██║  ██║██║╚══███╔╝██╔══██╗
+    ██████╔╝███████║██║  ███╔╝ ███████║
+    ██╔══██╗██╔══██║██║ ███╔╝  ██╔══██║
+    ██║  ██║██║  ██║██║███████╗██║  ██║
+    ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚══════╝╚═╝  ╚═╝
+    
+    🏛️  Greek Etymology API v1.0.0
+    🔗 Neo4j Database | 🤖 AI-Powered Analysis
+    ⚡ Async Operations | 📊 Structured Logging
+    """
+    print(rho_logo, flush=True)
+    
+    logger.info("🚀 Initializing Rhiza API services...")
+    
+    # Database connection with enhanced logging
+    import asyncio
+    max_retries = 10
+    retry_delay = 2
+    
+    logger.info("🔌 Connecting to Neo4j database...")
+    for attempt in range(max_retries):
+        try:
+            await graph_service.create_indexes()
+            logger.info("✅ Database connected and indexes created successfully")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"⚠️  Database connection failed (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s", error=str(e))
+                await asyncio.sleep(retry_delay)
+            else:
+                logger.error("❌ Failed to connect to database after all retries", error=str(e))
+                raise
+    
+    # AI providers status
+    ai_status = []
+    if bedrock_client:
+        ai_status.append("🧠 AWS Bedrock (Claude Sonnet 4)")
+    if GEMINI_API_KEY:
+        ai_status.append("🔮 Google Gemini")
+    
+    if ai_status:
+        logger.info(f"🤖 AI providers ready: {', '.join(ai_status)}")
+    else:
+        logger.warning("⚠️  No AI providers configured")
+    
+    logger.info("🎯 Rhiza API ready to explore Greek etymology!")
+
 @app.on_event("shutdown")
-def shutdown_event():
-    graph_service.close()
+async def shutdown_event():
+    await graph_service.close()
 
 # --- Pydantic Models for Data Validation ---
 
@@ -281,7 +333,7 @@ async def get_word_roots(request: Request, english_word: str, response: Response
     
     try:
         # First, check if we have this word in our graph
-        cached_result = graph_service.find_word_roots(english_word)
+        cached_result = await graph_service.find_word_roots(english_word)
         if cached_result:
             logger.info("Found cached result", word=english_word, source="graph_db")
             # Cache for 1 hour since data is stable
@@ -294,7 +346,7 @@ async def get_word_roots(request: Request, english_word: str, response: Response
         result = await get_ai_etymology(english_word)
         
         # Store the result in graph for future queries (even if no roots found)
-        graph_service.store_etymology(english_word, result["roots"])
+        await graph_service.store_etymology(english_word, result["roots"])
         if result.get("roots"):
             logger.info("Stored etymology in graph", word=english_word, roots_count=len(result["roots"]))
         else:
@@ -328,8 +380,8 @@ async def readiness_check():
     """Readiness check - verifies dependencies are available"""
     try:
         # Test Neo4j connection
-        with graph_service.driver.session() as session:
-            session.run("RETURN 1").single()
+        async with graph_service.driver.session() as session:
+            await session.run("RETURN 1")
         
         # Test AI providers (non-blocking)
         ai_status = {
@@ -354,7 +406,7 @@ async def get_words_from_root(root_name: str):
     Find all words that derive from a specific Greek root.
     """
     try:
-        words = graph_service.get_related_words(root_name)
+        words = await graph_service.get_related_words(root_name)
         return {"root": root_name, "words": words}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -366,8 +418,8 @@ async def get_word_graph(request: Request, english_word: str, response: Response
     Get graph visualization data for a word and its roots.
     """
     try:
-        with graph_service.driver.session() as session:
-            result = session.run("""
+        async with graph_service.driver.session() as session:
+            result = await session.run("""
                 MATCH (w:EnglishWord {name: $word})-[:DERIVES_FROM]->(r:GreekRoot)
                 RETURN {
                     nodes: collect(DISTINCT {id: w.name, label: w.name, type: 'word'}) + 
@@ -376,7 +428,7 @@ async def get_word_graph(request: Request, english_word: str, response: Response
                 } as graph
             """, word=english_word.lower())
             
-            record = result.single()
+            record = await result.single()
             if record and record["graph"]["nodes"]:
                 graph_data = record["graph"]
                 # Cache graph data for 1 hour
