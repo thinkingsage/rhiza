@@ -171,10 +171,10 @@ graph_service = EtymologyGraphService()
 # --- System Prompt ---
 
 SYSTEM_PROMPT = """
-You are an expert linguist and etymologist with a specialization in Ancient Greek and its influence on the English language. Your sole function is to analyze an English word and provide its Greek root components in a structured JSON format.
+You are an expert linguist and etymologist with a specialization in Ancient Greek and its influence on the English language. Your sole function is to analyze an English word and provide its Greek root components in a structured JSON format with enriched metadata.
 
 **Your Task:**
-Given an English word, identify its primary Ancient Greek root(s). For each root, you must provide the original Greek term, its common English transliteration, and its concise meaning.
+Given an English word, identify its primary Ancient Greek root(s). For each root, you must provide the original Greek term, its common English transliteration, its concise meaning, and additional linguistic metadata.
 
 **Output Rules:**
 1.  Your response MUST be a single, valid JSON object.
@@ -182,9 +182,27 @@ Given an English word, identify its primary Ancient Greek root(s). For each root
 3.  The JSON object must conform to the following structure:
     - `name`: The original English word provided.
     - `roots`: An array of root objects.
-        - Each root object must contain three string keys: `name` (the root in Ancient Greek script), `transliteration` (the common English transliteration), and `meaning` (a concise English meaning).
+        - Each root object must contain these string keys:
+          - `name` (the root in Ancient Greek script)
+          - `transliteration` (the common English transliteration)
+          - `meaning` (a concise English meaning)
+          - `category` (semantic category: emotion, abstract_concept, political, academic, nature, psychology, religion, human, skill, communication, size, distance, perception, or other)
+          - `frequency` (usage frequency in English: very_high, high, medium, low)
+          - `part_of_speech` (grammatical category: noun, adjective, verb, adverb, or other)
 4.  If the word is not of Greek origin, the `roots` array MUST be empty (`[]`).
 5.  If the word has multiple Greek roots, include an object for each root in the `roots` array.
+
+**Category Guidelines:**
+- emotion: feelings, emotions (φίλος, φόβος)
+- abstract_concept: ideas, concepts (σοφία, ἀρετή)
+- political: government, power (δῆμος, κρατία)
+- academic: study, knowledge (λόγος, μάθημα)
+- nature: natural world (βίος, γῆ, φύσις)
+- psychology: mind, soul (ψυχή, νοῦς)
+- religion: divine, sacred (θεός, ἱερός)
+- human: people, humanity (ἄνθρωπος)
+- communication: speech, writing (φωνή, γραφή)
+- perception: senses, observation (σκοπεῖν, ὁράω)
 
 ---
 Now, analyze the following word:
@@ -364,7 +382,7 @@ async def startup_event():
     
     logger.info("🚀 Initializing Rhiza API services...")
     
-    # Database connection with enhanced logging
+    # Database connection with enhanced logging - non-blocking
     max_retries = 10
     retry_delay = 2
     
@@ -379,8 +397,8 @@ async def startup_event():
                 logger.warning(f"⚠️  Database connection failed (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s", error=str(e))
                 await asyncio.sleep(retry_delay)
             else:
-                logger.error("❌ Failed to connect to database after all retries", error=str(e))
-                raise
+                logger.error("❌ Failed to connect to database after all retries")
+                logger.warning("⚠️  API will start without database - using AI fallback only")
     
     # AI providers status
     ai_status = []
