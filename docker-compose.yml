@@ -1,5 +1,16 @@
 version: '3.8'
 services:
+  proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile.proxy
+    ports:
+      - "3000:3000"
+    depends_on:
+      - rhiza-api
+      - rhiza-ui
+    restart: unless-stopped
+
   rhiza-api:
     build: ./rhiza-api
     ports:
@@ -39,7 +50,6 @@ services:
       - "7687:7687"
     environment:
       NEO4J_AUTH: neo4j/password
-      NEO4J_PLUGINS: '["apoc"]'
       LANG: C.UTF-8
       LC_ALL: C.UTF-8
     volumes:
