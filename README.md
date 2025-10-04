@@ -15,6 +15,14 @@ Rhiza (ῥίζα, meaning "root" in Ancient Greek) is a modern web application t
 
 ### 📊 **Interactive Graph Visualizations**
 - **D3.js force-directed graphs** showing etymological relationships
+- **Semantic category clustering** with color-coded nodes (13 categories)
+- **Frequency-based node sizing** (very high: 20px, high: 15px, medium/low: 10px)
+- **Part-of-speech visual indicators** using border styles and thickness
+- **Enhanced tooltips** with rich formatting and all enriched properties
+- **Interactive filtering** by category and frequency with toggle controls
+- **Educational modes**: Category Explorer and Grammar Guide
+- **Relationship strength visualization** with frequency-based link styling
+- **Comprehensive legend** showing all visual encoding meanings
 - **Zoom and pan** functionality for detailed exploration
 - **Beautiful gradients** and hover effects for enhanced UX
 
@@ -218,6 +226,9 @@ We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) 
 
 ## 📈 Roadmap
 
+- [x] **Enhanced Graph Visualizations** - ✅ Category clustering, frequency sizing, interactive filtering
+- [x] **Educational Modes** - ✅ Category Explorer and Grammar Guide
+- [x] **Rich Visual Encoding** - ✅ Color coding, tooltips, legends
 - [ ] **Multi-language Support** - Latin, Sanskrit, Germanic roots
 - [ ] **Advanced Visualizations** - Timeline views, etymology trees
 - [ ] **User Accounts** - Save favorite words and custom collections
