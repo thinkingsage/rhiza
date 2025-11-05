@@ -45,16 +45,11 @@ jobs:
       run: |
         docker build -t rhiza-ui ./rhiza-ui
 
-    - name: Create Docker network
-      run: |
-        docker network create rhiza-test
-
     - name: Start API container
       run: |
         docker run -d --name rhiza-api \
-          --network rhiza-test \
           -p 8000:8000 \
-          -e NEO4J_URI=bolt://localhost:7687 \
+          -e NEO4J_URI=bolt://neo4j:7687 \
           -e NEO4J_PASSWORD=password \
           -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
           -e AWS_BEARER_TOKEN_BEDROCK=${{ secrets.AWS_BEARER_TOKEN_BEDROCK }} \
@@ -64,7 +59,6 @@ jobs:
     - name: Start UI container
       run: |
         docker run -d --name rhiza-ui \
-          --network rhiza-test \
           -p 5173:5173 \
           rhiza-ui
 
