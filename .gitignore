@@ -213,3 +213,8 @@ __marimo__/
 
 # Node
 node_modules/
+package-lock.json
+
+# SvelteKit
+.svelte-kit/
+build/
