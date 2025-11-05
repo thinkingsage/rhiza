@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       neo4j:
         image: neo4j:5.15-community
@@ -41,25 +41,26 @@ jobs:
       run: |
         docker build -t rhiza-api ./rhiza-api
 
-    - name: Build UI container  
+    - name: Build UI container
       run: |
         docker build -t rhiza-ui ./rhiza-ui
 
     - name: Start API container
       run: |
         docker run -d --name rhiza-api \
-          --network host \
-          -e NEO4J_URI=bolt://localhost:7687 \
+          -p 8000:8000 \
+          -e NEO4J_URI=bolt://neo4j:7687 \
           -e NEO4J_PASSWORD=password \
           -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
           -e AWS_BEARER_TOKEN_BEDROCK=${{ secrets.AWS_BEARER_TOKEN_BEDROCK }} \
           -e ALLOWED_ORIGINS="*" \
+          --link neo4j:neo4j \
           rhiza-api
 
     - name: Start UI container
       run: |
         docker run -d --name rhiza-ui \
-          --network host \
+          -p 5173:5173 \
           rhiza-ui
 
     - name: Wait for Neo4j
@@ -91,7 +92,7 @@ jobs:
           echo "Attempt $i/30: API not ready yet..."
           sleep 2
         done
-        
+
         echo "Waiting for UI to be ready..."
         for i in {1..30}; do
           if curl -f -s http://localhost:5173 > /dev/null; then
