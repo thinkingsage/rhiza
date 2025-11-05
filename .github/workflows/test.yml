@@ -92,7 +92,7 @@ jobs:
           echo "Attempt $i/30: API not ready yet..."
           sleep 2
         done
-
+        
         echo "Waiting for UI to be ready..."
         for i in {1..30}; do
           if curl -f -s http://localhost:5173 > /dev/null; then
