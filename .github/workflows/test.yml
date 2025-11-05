@@ -37,30 +37,39 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y curl jq bc
 
-    - name: Build API container
-      run: |
-        docker build -t rhiza-api ./rhiza-api
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
 
-    - name: Build UI container
-      run: |
-        docker build -t rhiza-ui ./rhiza-ui
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
 
-    - name: Start API container
+    - name: Install API dependencies
       run: |
-        docker run -d --name rhiza-api \
-          -p 8000:8000 \
-          -e NEO4J_URI=bolt://neo4j:7687 \
-          -e NEO4J_PASSWORD=password \
-          -e GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
-          -e AWS_BEARER_TOKEN_BEDROCK=${{ secrets.AWS_BEARER_TOKEN_BEDROCK }} \
-          -e ALLOWED_ORIGINS="*" \
-          rhiza-api
+        cd rhiza-api
+        pip install -r requirements.txt
 
-    - name: Start UI container
+    - name: Install UI dependencies
       run: |
-        docker run -d --name rhiza-ui \
-          -p 5173:5173 \
-          rhiza-ui
+        cd rhiza-ui
+        npm install
+
+    - name: Start API
+      run: |
+        cd rhiza-api
+        NEO4J_URI=bolt://localhost:7687 \
+        NEO4J_PASSWORD=password \
+        GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
+        AWS_BEARER_TOKEN_BEDROCK=${{ secrets.AWS_BEARER_TOKEN_BEDROCK }} \
+        uvicorn main:app --host 0.0.0.0 --port 8000 &
+
+    - name: Start UI
+      run: |
+        cd rhiza-ui
+        VITE_API_URL=http://localhost:8000 npm run dev -- --host 0.0.0.0 --port 5173 &
 
     - name: Wait for Neo4j
       run: |
@@ -112,15 +121,13 @@ jobs:
     - name: Collect logs on failure
       if: failure()
       run: |
-        echo "=== API Logs ==="
-        docker logs rhiza-api
-        echo "=== UI Logs ==="
-        docker logs rhiza-ui
+        echo "=== Process Status ==="
+        ps aux | grep -E "(uvicorn|npm)" || true
         echo "=== Neo4j Logs ==="
-        docker logs $(docker ps -q --filter ancestor=neo4j:5.15-community)
+        docker logs $(docker ps -q --filter ancestor=neo4j:5.15-community) || true
 
     - name: Cleanup
       if: always()
       run: |
-        docker stop rhiza-api rhiza-ui || true
-        docker rm rhiza-api rhiza-ui || true
+        pkill -f uvicorn || true
+        pkill -f "npm run dev" || true
