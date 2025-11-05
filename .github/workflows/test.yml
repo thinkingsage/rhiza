@@ -51,6 +51,7 @@ jobs:
       run: |
         cd rhiza-api
         pip install poetry
+        poetry lock
         poetry install
 
     - name: Install UI dependencies
