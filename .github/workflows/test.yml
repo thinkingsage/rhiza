@@ -29,9 +29,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
     - name: Install dependencies
       run: |
         sudo apt-get update
@@ -52,7 +49,7 @@ jobs:
         cd rhiza-api
         pip install poetry
         poetry lock
-        poetry install
+        poetry install --no-root
 
     - name: Install UI dependencies
       run: |
