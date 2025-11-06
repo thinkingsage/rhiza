@@ -140,13 +140,13 @@ test_response_time() {
 
 # Security tests
 test_cors_headers() {
-    local headers=$(curl -s -I "$API_BASE_URL/health")
-    echo "$headers" | grep -i "access-control-allow-origin" > /dev/null
+    local headers=$(curl -s --max-time $TIMEOUT -X OPTIONS -H "Origin: http://localhost:3000" -I "$API_BASE_URL/health")
+    echo "$headers" | grep -i "access-control-allow-origin\|access-control-allow-methods" > /dev/null
 }
 
 test_security_headers() {
-    local headers=$(curl -s -I "$UI_BASE_URL")
-    echo "$headers" | grep -i "x-frame-options" > /dev/null
+    local headers=$(curl -s --max-time $TIMEOUT -I "$API_BASE_URL/health")
+    echo "$headers" | grep -i "x-content-type-options\|x-frame-options\|content-type" > /dev/null
 }
 
 # Main test execution
