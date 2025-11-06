@@ -618,7 +618,7 @@ async def get_word_graph(english_word: str, include_related: bool = False):
             if include_related:
                 try:
                     related_words = await graph_service.get_related_words(root.transliteration)
-                    for related_word in related_words[:3]:  # Limit to 3 per root
+                    for related_word in related_words[:8]:  # Limit to 8 per root
                         if related_word.lower() != english_word.lower():
                             related_node = GraphNode(
                                 id=f"word_{related_word}",

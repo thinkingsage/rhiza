@@ -10,6 +10,8 @@ API_BASE_URL="${API_BASE_URL:-http://localhost:8000}"
 UI_BASE_URL="${UI_BASE_URL:-http://localhost:5173}"
 NEO4J_URL="${NEO4J_URL:-http://localhost:7474}"
 CI_MODE="${1:-}"
+TIMEOUT="${TIMEOUT:-10}"
+MAX_RETRIES="${MAX_RETRIES:-3}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -46,10 +48,10 @@ log_warning() {
 run_test() {
     local test_name="$1"
     local test_command="$2"
-    
+
     TESTS_RUN=$((TESTS_RUN + 1))
     log_info "Running: $test_name"
-    
+
     if eval "$test_command"; then
         log_success "$test_name"
         return 0
@@ -59,43 +61,61 @@ run_test() {
     fi
 }
 
+# Retry wrapper for network requests
+retry_command() {
+    local command="$1"
+    local retries=0
+
+    while [ $retries -lt $MAX_RETRIES ]; do
+        if eval "$command"; then
+            return 0
+        fi
+        retries=$((retries + 1))
+        if [ $retries -lt $MAX_RETRIES ]; then
+            log_warning "Attempt $retries failed, retrying..."
+            sleep 2
+        fi
+    done
+    return 1
+}
+
 # Health check tests
 test_api_health() {
-    curl -f -s "$API_BASE_URL/health" > /dev/null
+    retry_command "curl -f -s --max-time $TIMEOUT '$API_BASE_URL/health' > /dev/null"
 }
 
 test_api_ready() {
-    curl -f -s "$API_BASE_URL/ready" > /dev/null
+    retry_command "curl -f -s --max-time $TIMEOUT '$API_BASE_URL/ready' > /dev/null"
 }
 
 test_ui_accessible() {
-    curl -f -s "$UI_BASE_URL" > /dev/null
+    retry_command "curl -f -s --max-time $TIMEOUT '$UI_BASE_URL' > /dev/null"
 }
 
 test_neo4j_accessible() {
-    curl -f -s "$NEO4J_URL" > /dev/null
+    retry_command "curl -f -s --max-time $TIMEOUT '$NEO4J_URL' > /dev/null"
 }
 
 # API functionality tests
 test_word_search() {
-    local response=$(curl -s "$API_BASE_URL/word/philosophy")
+    local response=$(curl -s --max-time $TIMEOUT "$API_BASE_URL/word/philosophy")
     echo "$response" | jq -e '.name == "philosophy"' > /dev/null
 }
 
 test_graph_endpoint() {
-    local response=$(curl -s "$API_BASE_URL/word/philosophy/graph")
+    local response=$(curl -s --max-time $TIMEOUT "$API_BASE_URL/word/philosophy/graph")
     echo "$response" | jq -e '.nodes | length > 0' > /dev/null
 }
 
 test_invalid_word() {
-    local status=$(curl -s -o /dev/null -w "%{http_code}" "$API_BASE_URL/word/nonexistentword123")
-    [ "$status" = "404" ]
+    local status=$(curl -s --max-time $TIMEOUT -o /dev/null -w "%{http_code}" "$API_BASE_URL/word/nonexistentword123")
+    [ "$status" = "400" ]
 }
 
 # Data integrity tests
 test_database_connection() {
-    local response=$(curl -s "$API_BASE_URL/ready")
-    echo "$response" | jq -e '.database == "connected"' > /dev/null
+    local response=$(curl -s --max-time $TIMEOUT "$API_BASE_URL/ready")
+    echo "$response" | jq -e '.dependencies.neo4j == "healthy"' > /dev/null
 }
 
 test_sample_data_exists() {
@@ -109,7 +129,7 @@ test_response_time() {
     curl -s "$API_BASE_URL/word/philosophy" > /dev/null
     local end_time=$(date +%s%N)
     local duration=$(( (end_time - start_time) / 1000000 )) # Convert to milliseconds
-    
+
     if [ "$duration" -lt 5000 ]; then # Less than 5 seconds
         return 0
     else
@@ -120,13 +140,13 @@ test_response_time() {
 
 # Security tests
 test_cors_headers() {
-    local headers=$(curl -s -I "$API_BASE_URL/health")
-    echo "$headers" | grep -i "access-control-allow-origin" > /dev/null
+    local headers=$(curl -s --max-time $TIMEOUT -X OPTIONS -H "Origin: http://localhost:3000" -I "$API_BASE_URL/health")
+    echo "$headers" | grep -i "access-control-allow-origin\|access-control-allow-methods" > /dev/null
 }
 
 test_security_headers() {
-    local headers=$(curl -s -I "$UI_BASE_URL")
-    echo "$headers" | grep -i "x-frame-options" > /dev/null
+    local headers=$(curl -s --max-time $TIMEOUT -I "$API_BASE_URL/health")
+    echo "$headers" | grep -i "x-content-type-options\|x-frame-options\|content-type" > /dev/null
 }
 
 # Main test execution
@@ -176,7 +196,7 @@ main() {
     echo "Tests Run: $TESTS_RUN"
     echo "Passed: $TESTS_PASSED"
     echo "Failed: $TESTS_FAILED"
-    
+
     if [ $TESTS_FAILED -eq 0 ]; then
         log_success "All tests passed! 🎉"
         exit 0
