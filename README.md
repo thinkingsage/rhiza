@@ -1,57 +1,49 @@
-# 🏛️ Rhiza - Greek Etymology Explorer
+# Rhiza
 
-> **Discover the Ancient Greek roots of English words through AI-powered analysis and beautiful visualizations**
-
-Rhiza (ῥίζα, meaning "root" in Ancient Greek) is a modern web application that reveals the fascinating etymological connections between English words and their Greek origins. Using advanced AI models and interactive graph visualizations, it makes exploring language history both educational and delightful.
+Rhiza (ῥίζα, "root" in Ancient Greek) analyzes English words to identify their Greek etymological origins using AI and displays relationships as interactive graphs.
 
 ![Rhiza Demo](https://via.placeholder.com/800x400/2c5aa0/ffffff?text=Rhiza+Etymology+Explorer)
 
-## ✨ Features
+## Features
 
-### 🤖 **AI-Powered Etymology Analysis**
-- **Claude Sonnet 4** (AWS Bedrock) with Google Gemini fallback
-- Accurate Greek root identification with transliterations and meanings
-- Intelligent caching to reduce API costs and improve performance
+**AI Analysis**
+- Claude Sonnet 4 (AWS Bedrock) with Google Gemini fallback
+- Greek root identification with transliterations and meanings
+- Response caching
 
-### 📊 **Interactive Graph Visualizations**
-- **D3.js force-directed graphs** showing etymological relationships
-- **Semantic category clustering** with color-coded nodes (13 categories)
-- **Frequency-based node sizing** (very high: 20px, high: 15px, medium/low: 10px)
-- **Part-of-speech visual indicators** using border styles and thickness
-- **Enhanced tooltips** with rich formatting and all enriched properties
-- **Interactive filtering** by category and frequency with toggle controls
-- **Educational modes**: Category Explorer and Grammar Guide
-- **Relationship strength visualization** with frequency-based link styling
-- **Comprehensive legend** showing all visual encoding meanings
-- **Zoom and pan** functionality for detailed exploration
-- **Beautiful gradients** and hover effects for enhanced UX
+**Graph Visualization**
+- D3.js force-directed graphs
+- Semantic category clustering (13 categories)
+- Frequency-based node sizing
+- Part-of-speech indicators
+- Interactive filtering by category and frequency
+- Zoom and pan controls
 
-### 🏗️ **Production-Ready Architecture**
-- **FastAPI backend** with async operations and comprehensive security
-- **SvelteKit frontend** with modern responsive design
-- **Neo4j graph database** for efficient relationship storage
-- **Docker containerization** with security hardening
+**Stack**
+- FastAPI backend with async operations
+- SvelteKit frontend
+- Neo4j graph database
+- Docker containerization
 
-### 🔒 **Enterprise Security**
-- Container security with non-root users and read-only filesystems
-- Input validation and sanitization against injection attacks
+**Security**
+- Non-root container users
+- Input validation and sanitization
 - Rate limiting and CORS protection
-- Structured logging with request tracing
+- Structured logging
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-Before running Rhiza, you need to obtain API keys for the AI services:
+API keys required for AI services:
 
-1. **AWS Bedrock Access** (Primary AI provider)
-   - Set up AWS account with Bedrock access
-   - Enable Claude Sonnet 4 model in your region
-   - Generate AWS access credentials
+1. AWS Bedrock access (primary)
+   - AWS account with Bedrock enabled
+   - Claude Sonnet 4 available in your region
+   - AWS access credentials
 
-2. **Google Gemini API Key** (Fallback AI provider)
-   - Visit [Google AI Studio](https://aistudio.google.com/)
-   - Create a new API key for Gemini
+2. Google Gemini API key (fallback)
+   - Obtain from [Google AI Studio](https://aistudio.google.com/)
 
 ### Environment Setup
 
@@ -71,7 +63,7 @@ NEO4J_USER=neo4j
 NEO4J_PASSWORD=password
 ```
 
-**⚠️ Important:** The application requires at least one AI provider to function. Without valid API keys, etymology analysis will fail.
+**Note:** At least one AI provider key is required for etymology analysis.
 
 ### Using Docker Compose (Recommended)
 
@@ -108,9 +100,7 @@ npm install
 npm run dev
 ```
 
-## 🎯 Usage Examples
-
-Try searching for these words to see Rhiza in action:
+## Usage Examples
 
 | Word | Greek Roots | Meaning |
 |------|-------------|---------|
@@ -120,33 +110,17 @@ Try searching for these words to see Rhiza in action:
 | **psychology** | ψυχή + λόγος | soul + study |
 | **geography** | γῆ + γραφή | earth + writing |
 
-## 🏗️ Architecture
-
-```mermaid
-graph TB
-    Proxy[🌐 Nginx Proxy<br/>Load Balancer] --> UI[🌟 Rhiza UI<br/>SvelteKit + D3.js]
-    Proxy --> API[🏛️ Rhiza API<br/>FastAPI + Python]
-    API --> Neo4j[(📊 Neo4j<br/>Graph Database)]
-    API --> Bedrock[🤖 AWS Bedrock<br/>Claude Sonnet 4]
-    API --> Gemini[🔮 Google Gemini<br/>Fallback AI]
-    
-    style Proxy fill:#ff6b6b
-    style UI fill:#667eea
-    style API fill:#f093fb
-    style Neo4j fill:#16a085
-    style Bedrock fill:#ff9500
-    style Gemini fill:#4285f4
-```
+## Architecture
 
 ### Components
 
-- **[proxy](./proxy/)** - Nginx reverse proxy for load balancing and routing
-- **[rhiza-ui](./rhiza-ui/)** - Modern SvelteKit frontend with interactive visualizations
-- **[rhiza-api](./rhiza-api/)** - FastAPI backend with AI integration and graph database
-- **Neo4j** - Graph database for storing etymological relationships
-- **AI Providers** - AWS Bedrock (Claude) and Google Gemini for etymology analysis
+- **proxy** - Nginx reverse proxy
+- **rhiza-ui** - SvelteKit frontend with D3.js visualizations
+- **rhiza-api** - FastAPI backend
+- **Neo4j** - Graph database
+- **AI Providers** - AWS Bedrock (Claude) and Google Gemini
 
-## 📊 API Reference
+## API Reference
 
 ### Etymology Analysis
 ```http
@@ -185,14 +159,14 @@ GET /health      # Service health
 GET /ready       # Dependency readiness
 ```
 
-## 🛠️ Development
+## Development
 
 ### Prerequisites
 
-- **Docker & Docker Compose** (recommended)
-- **Python 3.11+** for API development
-- **Node.js 18+** for UI development
-- **Neo4j 5.15+** for database
+- Docker & Docker Compose (recommended)
+- Python 3.11+ for API development
+- Node.js 18+ for UI development
+- Neo4j 5.15+ for database
 
 ### Environment Setup
 
@@ -224,7 +198,7 @@ cd rhiza-api && black . && isort .
 cd rhiza-ui && npm run format
 ```
 
-## 🚀 Deployment
+## Deployment
 
 ### Production Docker
 
@@ -236,84 +210,46 @@ docker compose build
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-### Cloud Deployment
+### Cloud Deployment Options
 
-- **AWS ECS/Fargate** - Container orchestration
-- **Google Cloud Run** - Serverless containers  
-- **Azure Container Instances** - Managed containers
-- **Kubernetes** - Self-managed orchestration
+- AWS ECS/Fargate
+- Google Cloud Run
+- Azure Container Instances
+- Kubernetes
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details on submitting bug reports, feature requests, and code contributions.
 
-- 🐛 **Bug Reports** - Help us improve reliability
-- ✨ **Feature Requests** - Suggest new capabilities
-- 📝 **Documentation** - Improve guides and examples
-- 🔧 **Code Contributions** - Submit pull requests
+Areas for contribution:
+- Etymology accuracy improvements
+- Additional language support (Latin, Sanskrit, etc.)
+- Graph visualization enhancements
+- Performance optimization
+- Accessibility improvements
 
-### Areas for Contribution
+## Roadmap
 
-- **Etymology Accuracy** - Improve AI prompts and validation
-- **Language Support** - Add Latin, Sanskrit, or other root languages
-- **Visualizations** - New graph layouts and interactive features
-- **Performance** - Caching strategies and optimization
-- **Accessibility** - Screen reader support and keyboard navigation
+- [x] Category clustering, frequency sizing, interactive filtering
+- [x] Educational modes (Category Explorer, Grammar Guide)
+- [ ] Multi-language support (Latin, Sanskrit, Germanic roots)
+- [ ] Timeline views and etymology trees
+- [ ] User accounts and word collections
+- [ ] Educational features (quizzes, learning paths)
+- [ ] Batch processing API
+- [ ] Mobile applications
 
-## 📈 Roadmap
+## License
 
-- [x] **Enhanced Graph Visualizations** - ✅ Category clustering, frequency sizing, interactive filtering
-- [x] **Educational Modes** - ✅ Category Explorer and Grammar Guide
-- [x] **Rich Visual Encoding** - ✅ Color coding, tooltips, legends
-- [ ] **Multi-language Support** - Latin, Sanskrit, Germanic roots
-- [ ] **Advanced Visualizations** - Timeline views, etymology trees
-- [ ] **User Accounts** - Save favorite words and custom collections
-- [ ] **Educational Features** - Quizzes, learning paths, progress tracking
-- [ ] **API Enhancements** - Batch processing, webhook notifications
-- [ ] **Mobile App** - Native iOS and Android applications
+Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). See [LICENSE](LICENSE) for details.
 
-## 🏆 Recognition
+Key requirements:
+- Free for personal, educational, and commercial use
+- Derivative works must be open source
+- Network users must have access to source code
 
-- **Educational Value** - Makes etymology accessible and engaging
-- **Technical Excellence** - Modern architecture with security best practices
-- **Open Source** - AGPL-3.0 licensed for community benefit
-- **AI Innovation** - Practical application of large language models
+## Acknowledgments
 
-## 📄 License
-
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
-
-**What this means:**
-- ✅ **Free to use** - Personal, educational, and commercial use
-- ✅ **Open source** - Full source code available
-- ✅ **Copyleft** - Derivative works must also be open source
-- ⚠️ **Network use** - Must provide source to users accessing over network
-
-See [LICENSE](LICENSE) for full details.
-
-## 🙏 Acknowledgments
-
-- **Ancient Greek Language** - The foundation of Western etymology
-- **Neo4j Community** - Excellent graph database technology
-- **Anthropic & Google** - Advanced AI language models
-- **Open Source Community** - Libraries, tools, and inspiration
-
-## 📞 Support & Community
-
-- 📖 **[Documentation](https://github.com/your-username/rhiza/wiki)** - Comprehensive guides
-- 🐛 **[Issues](https://github.com/your-username/rhiza/issues)** - Bug reports and feature requests  
-- 💬 **[Discussions](https://github.com/your-username/rhiza/discussions)** - Community Q&A
-- 🎨 **[Design System](https://github.com/your-username/rhiza/wiki/Design)** - UI guidelines
-- 📊 **[API Docs](https://your-api-url.com/docs)** - Interactive API reference
-
----
-
-<div align="center">
-
-**Explore the roots of language** 🌱
-
-*Made with ❤️ for etymology enthusiasts and language learners*
-
-[⭐ Star this project](https://github.com/your-username/rhiza) • [🍴 Fork it](https://github.com/your-username/rhiza/fork) • [📢 Share it](https://twitter.com/intent/tweet?text=Check%20out%20Rhiza%20-%20Greek%20Etymology%20Explorer!)
-
-</div>
+- Neo4j Community
+- Anthropic & Google for AI models
+- Open Source Community
