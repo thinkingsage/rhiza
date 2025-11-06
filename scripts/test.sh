@@ -114,8 +114,8 @@ test_invalid_word() {
 
 # Data integrity tests
 test_database_connection() {
-    local response=$(curl -s "$API_BASE_URL/ready")
-    echo "$response" | jq -e '.database == "connected"' > /dev/null
+    local response=$(curl -s --max-time $TIMEOUT "$API_BASE_URL/ready")
+    echo "$response" | jq -e '.dependencies.neo4j == "healthy"' > /dev/null
 }
 
 test_sample_data_exists() {
