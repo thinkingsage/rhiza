@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/thinkingsage/rhiza#readme",
   "dependencies": {
-    "express": "^5.1.0",
+    "express": "^5.2.0",
     "http-proxy-middleware": "^3.0.5"
   }
 }
