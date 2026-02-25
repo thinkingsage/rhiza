@@ -17,7 +17,7 @@ from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-import google.generativeai as genai
+import google.genai as genai
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 import structlog
@@ -108,8 +108,9 @@ class WordResponse(BaseModel):
 # --- AI Configuration ---
 
 # Configure Gemini if API key is available
+gemini_client = None
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
     logger.info("Gemini API configured")
 
 # Initialize Bedrock client with bearer token
@@ -310,16 +311,18 @@ async def call_bedrock_ai(word: str) -> dict:
 
 async def call_gemini_ai(word: str) -> dict:
     """Call Google Gemini model for etymology analysis."""
-    if not GEMINI_API_KEY:
+    if not gemini_client:
         raise Exception("Gemini API key not available")
     
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
         full_prompt = f"{SYSTEM_PROMPT}\n{word}"
         
         logger.info("Calling Gemini API", word=word, model="gemini-1.5-flash")
         
-        response = model.generate_content(full_prompt)
+        response = gemini_client.models.generate_content(
+            model='gemini-1.5-flash',
+            contents=full_prompt
+        )
         
         # Parse the JSON response
         result = json.loads(response.text)
@@ -348,7 +351,7 @@ async def get_ai_etymology(word: str) -> dict:
             logger.warning("Bedrock failed, trying Gemini", word=word, error=str(e))
     
     # Fallback to Gemini
-    if GEMINI_API_KEY:
+    if gemini_client:
         try:
             result = await call_gemini_ai(word)
             logger.info("AI etymology completed", word=word, provider="gemini")
@@ -404,7 +407,7 @@ async def startup_event():
     ai_status = []
     if bedrock_client:
         ai_status.append("🧠 AWS Bedrock (Claude Sonnet 4)")
-    if GEMINI_API_KEY:
+    if gemini_client:
         ai_status.append("🔮 Google Gemini")
     
     if ai_status:
@@ -436,7 +439,7 @@ async def readiness_check():
         # Test AI providers (non-blocking)
         ai_status = {
             "bedrock": bedrock_client is not None,
-            "gemini": GEMINI_API_KEY is not None
+            "gemini": gemini_client is not None
         }
         
         return {
